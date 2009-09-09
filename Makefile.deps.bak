@@ -1,0 +1,11 @@
+# DO NOT DELETE
+
+TNet.o: TNet.h TNode.h TRouter.h nanoxim.h TBuffer.h TReservationTable.h
+TNet.o: TProcessingElement.h
+TRouter.o: TRouter.h nanoxim.h TBuffer.h TReservationTable.h
+TProcessingElement.o: TProcessingElement.h nanoxim.h
+TBuffer.o: TBuffer.h nanoxim.h
+TReservationTable.o: nanoxim.h TReservationTable.h
+CmdLineParser.o: nanoxim.h
+main.o: nanoxim.h TNet.h TNode.h TRouter.h TBuffer.h TReservationTable.h
+main.o: TProcessingElement.h CmdLineParser.h
