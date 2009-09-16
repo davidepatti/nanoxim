@@ -140,8 +140,6 @@ void TRouter::txProcess()
 
 //---------------------------------------------------------------------------
 
-//---------------------------------------------------------------------------
-
 vector<int> TRouter::routingFunction(const TRouteData& route_data) 
 {
   TCoord position  = id2Coord(route_data.current_id);

@@ -45,7 +45,6 @@ SC_MODULE(TRouter)
 
   void               rxProcess();        // The receiving process
   void               txProcess();        // The transmitting process
-  void               bufferMonitor();
   void               configure(const int _id, const unsigned int _max_buffer_size);
 
   // Constructor
@@ -57,10 +56,6 @@ SC_MODULE(TRouter)
     sensitive << clock.pos();
 
     SC_METHOD(txProcess);
-    sensitive << reset;
-    sensitive << clock.pos();
-
-    SC_METHOD(bufferMonitor);
     sensitive << reset;
     sensitive << clock.pos();
   }

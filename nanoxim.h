@@ -139,6 +139,8 @@ struct TPacket
 //---------------------------------------------------------------------------
 inline ostream& operator << (ostream& os, const TPacket& packet)
 {
+  if (TGlobalParams::verbose_mode==VERBOSE_HIGH)
+  {
 
       os << "### PACKET ###" << endl;
       os << "Source Node[" << packet.src_id << "]" << endl;
@@ -149,6 +151,7 @@ inline ostream& operator << (ostream& os, const TPacket& packet)
 	case PACKET_SEG_CANCEL: os << "Packet Type is CANCEL" << endl; break;
       }
       os << "Total number of hops:" << packet.hop_no << endl;
+  }
 
   return os;
 }
