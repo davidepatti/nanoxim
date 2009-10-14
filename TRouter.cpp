@@ -9,46 +9,49 @@
 
 void TRouter::rxProcess()
 {
-  if(reset.read())
+    if(reset.read())
     {
-      // Clear outputs and indexes of receiving protocol
-      for(int i=0; i<DIRECTIONS+1; i++)
+	// Clear outputs and indexes of receiving protocol
+	for(int i=0; i<DIRECTIONS+1; i++)
 	{
-	  ack_rx[i].write(0);
-	  current_level_rx[i] = 0;
+	    ack_rx[i].write(0);
+	    current_level_rx[i] = 0;
 	}
-      reservation_table.clear();
+	reservation_table.clear();
     }
-  else
+    else
     {
-      // For each channel decide if a new packet can be accepted
-      //
-      // This process simply sees a flow of incoming packets. All arbitration related issues are addressed in the txProcess()
- 
-      for(int i=0; i<DIRECTIONS+1; i++)
+	// For each channel decide if a new packet can be accepted
+	//
+	// This process simply sees a flow of incoming packets. All arbitration related issues are addressed in the txProcess()
+
+	for(int i=0; i<DIRECTIONS+1; i++)
 	{
-	  // To accept a new packet, the following conditions must match:
-	  //
-	  // 1) there is an incoming request
-	  // 2) there is a free slot in the input buffer of direction i
+	    // To accept a new packet, the following conditions must match:
+	    //
+	    // 1) there is an incoming request
+	    // 2) there is a free slot in the input buffer of direction i
 
-	  if ( (req_rx[i].read()==1-current_level_rx[i]) && !buffer[i].IsFull() )
+	    if ( (req_rx[i].read()==1-current_level_rx[i]) && !buffer[i].IsFull() )
 	    {
-	      TPacket received_packet = packet_rx[i].read();
+		cout << "[R " << local_id <<"] rxProcess can receive from dir " << i << endl;
+		cout << "[R " << local_id <<"] req_rx = " << req_rx[i].read() << " current_level_rx " << current_level_rx[i] << endl;
+		cout << "[R " << local_id <<"] buffer is full? " << buffer[i].IsFull() << endl;
+		TPacket received_packet = packet_rx[i].read();
 
-	      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
+		if(TGlobalParams::verbose_mode > VERBOSE_OFF)
 		{
-		  cout << sc_time_stamp().to_double()/1000 << ": Router[" << local_id <<"], Input[" << i << "], Received packet: " << received_packet << endl;
+		    cout << sc_time_stamp().to_double()/1000 << ": Router[" << local_id <<"], Input[" << i << "], Received packet: " << received_packet << endl;
 		}
 
-	      // Store the incoming packet in the circular buffer
-	      buffer[i].Push(received_packet);            
+		// Store the incoming packet in the circular buffer
+		buffer[i].Push(received_packet);            
 
-	      // Negate the old value for Alternating Bit Protocol (ABP)
-	      current_level_rx[i] = 1-current_level_rx[i];
+		// Negate the old value for Alternating Bit Protocol (ABP)
+		current_level_rx[i] = 1-current_level_rx[i];
 
 	    }
-	  ack_rx[i].write(current_level_rx[i]);
+	    ack_rx[i].write(current_level_rx[i]);
 	}
     }
 }
@@ -75,6 +78,7 @@ void TRouter::txProcess()
 
 	  if ( !buffer[i].IsEmpty() )
 	    {
+	      cout << "[ROUTER " << local_id <<"] txProcess: buffer["<<i<<"] not empty" << endl;
 	      TPacket packet = buffer[i].Front();
 
 	      if (packet.type==PACKET_SEG_REQUEST) 
@@ -83,12 +87,14 @@ void TRouter::txProcess()
 		  TRouteData route_data;
 		  route_data.current_id = local_id;
 		  route_data.src_id = packet.src_id;
+		  route_data.dst_id = packet.dst_id;
 		  route_data.dir_in = i;
 
 		  int o = route(route_data);
 
 		  if (reservation_table.isAvailable(o))
 		    {
+			cout << "[ROUTER " << local_id << "]:txProcess reservation_table is available with i="<<i<<",o="<<o<<endl;
 		      reservation_table.reserve(i, o);
 		      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
 			{
@@ -156,6 +162,7 @@ vector<int> TRouter::routingFunction(const TRouteData& route_data)
       assert(false);
     }
 
+  assert(false);
   // something weird happened, you shouldn't be here
   return (vector<int>)(0);
 }

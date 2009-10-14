@@ -40,37 +40,41 @@ void TProcessingElement::rxProcess()
 
 void TProcessingElement::txProcess()
 {
-  if(reset.read())
-  {
-    req_tx.write(0);
-    current_level_tx = 0;
-  }
-  else
-  {
-    TPacket packet;
-
-    if (canShot(packet))
+    if(reset.read())
     {
-      packet_queue.push(packet);
+	req_tx.write(0);
+	current_level_tx = 0;
     }
     else
-
-
-    if(ack_tx.read() == current_level_tx)
     {
-      if(!packet_queue.empty())
-      {
-        TPacket packet = nextPacket();                  // Generate a new packet
-        if(TGlobalParams::verbose_mode > VERBOSE_OFF)
-        {
-          cout << sc_time_stamp().to_double()/1000 << ": ProcessingElement[" << local_id << "] SENDING " << packet << endl;
-        }
-	packet_tx->write(packet);                     // Send the generated packet
-	current_level_tx = 1-current_level_tx;    // Negate the old value for Alternating Bit Protocol (ABP)
-	req_tx.write(current_level_tx);
-      }
+	TPacket packet;
+
+	if (canShot(packet))
+	{
+	    cout << "[PE "<< local_id<<"] can shot" << endl;
+	    packet_queue.push(packet);
+	}
+
+	cout << "[PE "<< local_id<<"]:txProcess (checking if ack_tx == current_level)" << endl;
+	cout << "[PE "<< local_id<<"] ack_tx " << ack_tx.read() << " current_level_tx " << current_level_tx << endl;
+
+	if(ack_tx.read() == current_level_tx)
+	{
+	    cout << "[PE "<< local_id<<"] can transmit " << endl;
+	    if(!packet_queue.empty())
+	    {
+		cout << "[PE " << local_id <<"] ok, not emtpy queue" << endl;
+		TPacket packet = nextPacket();                  // Generate a new packet
+		if(TGlobalParams::verbose_mode > VERBOSE_OFF)
+		{
+		    cout << sc_time_stamp().to_double()/1000 << ": ProcessingElement[" << local_id << "] SENDING " << packet << endl;
+		}
+		packet_tx->write(packet);                     // Send the generated packet
+		current_level_tx = 1-current_level_tx;    // Negate the old value for Alternating Bit Protocol (ABP)
+		req_tx.write(current_level_tx);
+	    }
+	}
     }
-  }
 }
 
 //---------------------------------------------------------------------------
@@ -79,11 +83,13 @@ TPacket TProcessingElement::nextPacket()
 {
   TPacket packet = packet_queue.front();
 
+  /* TODO: already set by canShot (no more flits)
   packet.src_id      = packet.src_id;
   packet.dst_id      = packet.dst_id;
   packet.timestamp   = packet.timestamp;
   packet.hop_no      = 0;
   //  packet.payload     = DEFAULT_PAYLOAD;
+  //  */
 
   packet.type = PACKET_SEG_REQUEST;
   
@@ -96,7 +102,7 @@ TPacket TProcessingElement::nextPacket()
 
 bool TProcessingElement::canShot(TPacket& packet)
 {
-    bool   shot;
+    bool   shot = false;
     double threshold;
 
     // TODO: add code here to choose PE behaviour
@@ -105,10 +111,15 @@ bool TProcessingElement::canShot(TPacket& packet)
     switch(behaviour)
     { 
 	case 0:
-	    packet = trafficRandom();
+	    if (local_id==0) 
+	    {
+		shot = true;
+		packet = trafficRandom();
+	    }
 	    break;
 
 	default:
+	    shot = false;
 	    assert(false);
     }
     return shot;
@@ -133,6 +144,8 @@ TPacket TProcessingElement::trafficRandom()
     p.dst_id = randInt(0, max_id);
 
   } while(p.dst_id==p.src_id);
+
+  cout << "[PE "<<local_id<<"]: created packet with dst "<<p.dst_id << endl;
 
   return p;
 }
