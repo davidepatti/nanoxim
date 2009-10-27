@@ -39,6 +39,7 @@ int   TGlobalParams::routing_algorithm                = ROUTING_XY;
 int   TGlobalParams::verbose_mode		      = DEFAULT_VERBOSE_MODE;
 int   TGlobalParams::simulation_time		      = DEFAULT_SIMULATION_TIME;
 int   TGlobalParams::rnd_generator_seed               = 0;
+int   TGlobalParams::disr               = DEFAULT_DISR_SETUP;
 
 //---------------------------------------------------------------------------
 

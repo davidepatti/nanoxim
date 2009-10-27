@@ -55,15 +55,14 @@ void TProcessingElement::txProcess()
 	    packet_queue.push(packet);
 	}
 
-	cout << "[PE "<< local_id<<"]:txProcess (checking if ack_tx == current_level)" << endl;
-	cout << "[PE "<< local_id<<"] ack_tx " << ack_tx.read() << " current_level_tx " << current_level_tx << endl;
+	//cout << "[PE "<< local_id<<"]:txProcess (checking if ack_tx == current_level)" << endl;
+	//cout << "[PE "<< local_id<<"] ack_tx " << ack_tx.read() << " current_level_tx " << current_level_tx << endl;
 
 	if(ack_tx.read() == current_level_tx)
 	{
-	    cout << "[PE "<< local_id<<"] can transmit " << endl;
 	    if(!packet_queue.empty())
 	    {
-		cout << "[PE " << local_id <<"] ok, not emtpy queue" << endl;
+		cout << "[PE " << local_id <<"] can send and has not emtpy queue" << endl;
 		TPacket packet = nextPacket();                  // Generate a new packet
 		if(TGlobalParams::verbose_mode > VERBOSE_OFF)
 		{
@@ -104,18 +103,33 @@ bool TProcessingElement::canShot(TPacket& packet)
 {
     bool   shot = false;
     double threshold;
+    // TODO: just to set the rate for testing...
+    int rate = 100000;
 
     // TODO: add code here to choose PE behaviour
-    int behaviour = 0;
+    int behaviour;
+
+    behaviour = TGlobalParams::disr;
+    // DiSR, current testing approch:
+    // - default is an XY routing where only node 0 sends packets
+    // to a random destination
+    // - if disr is enabled with 1, a DiSR setup is being tested.
+    // In this case no packet should be generated from a PE, since is
+    // more appropriate to think DiSR setup as a router configuration
+    // issue.
 
     switch(behaviour)
     { 
 	case 0:
-	    if (local_id==0) 
+
+	    if ( (local_id==0) && (((int)sc_time_stamp().to_double())%rate==0) )
 	    {
 		shot = true;
 		packet = trafficRandom();
 	    }
+	    break;
+	case 1:
+	    return false;
 	    break;
 
 	default:
@@ -131,7 +145,6 @@ TPacket TProcessingElement::trafficRandom()
 {
   TPacket p;
   p.src_id = local_id;
-  double rnd = rand()/(double)RAND_MAX;
   double range_start = 0.0;
 
   //cout << "\n " << sc_time_stamp().to_double()/1000 << " PE " << local_id << " rnd = " << rnd << endl;
@@ -146,6 +159,8 @@ TPacket TProcessingElement::trafficRandom()
   } while(p.dst_id==p.src_id);
 
   cout << "[PE "<<local_id<<"]: created packet with dst "<<p.dst_id << endl;
+  
+  p.timestamp = sc_time_stamp().to_double()/1000;
 
   return p;
 }

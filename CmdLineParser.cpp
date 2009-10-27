@@ -81,6 +81,8 @@ void parseCmdLine(int arg_num, char *arg_vet[])
       }
       else if (!strcmp(arg_vet[i], "-sim"))
 	TGlobalParams::simulation_time = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-disr")) 
+	  TGlobalParams::disr = 1;
       else 
       {
 	cerr << "Error: Invalid option: " << arg_vet[i] << endl;

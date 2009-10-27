@@ -44,6 +44,7 @@ using namespace std;
 #define DEFAULT_STATS_WARM_UP_TIME  DEFAULT_RESET_TIME
 #define DEFAULT_DETAILED                         false
 #define DEFAULT_RESET_TIME                        1000
+#define DEFAULT_DISR_SETUP			     0
 
 // TODO by Fafa - this MUST be removed!!!
 #define MAX_STATIC_DIM 20
@@ -59,6 +60,7 @@ struct TGlobalParams
   static int routing_algorithm;
   static int simulation_time;
   static int rnd_generator_seed;
+  static int disr;
 };
 
 
@@ -127,12 +129,34 @@ struct TPacket
   TPayload           payload;      // Optional payload
   double             timestamp;    // Unix timestamp at packet generation
   int                hop_no;       // Current number of hops from source to destination
+  int 		     dir_in;       // The direction it came from
   inline bool operator == (const TPacket& packet) const
   {
     return (packet.src_id==src_id && packet.type==type && packet.payload==payload && packet.hop_no==hop_no);
   }
 
 };
+
+//---------------------------------------------------------------------------
+// Distribuited SR data
+
+struct TDiSR_data
+{
+    //an ID that corresponds to some segment the node belongs to or
+    //it's candidate to belong. If 0, node is not visited/tvisited
+    int visited;
+    int tvisited;
+
+    // intented as bidirectional!
+    int link_visited[4];
+    int link_tvisited[4];
+
+    int starting;
+    int terminal;
+    int segment;
+    int subnet;
+};
+
 
 // output redefinitions *******************************************
 
