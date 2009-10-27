@@ -27,6 +27,8 @@ void TRouter::rxProcess()
 
 	for(int i=0; i<DIRECTIONS+1; i++)
 	{
+	    if (TGlobalParams::disr) DiSR_update_status();
+
 	    // To accept a new packet, the following conditions must match:
 	    //
 	    // 1) there is an incoming request
@@ -34,9 +36,7 @@ void TRouter::rxProcess()
 
 	    if ( (req_rx[i].read()==1-current_level_rx[i]) && !buffer[i].IsFull() )
 	    {
-		cout << "[R " << local_id <<"] rxProcess can receive from dir " << i << endl;
-		cout << "[R " << local_id <<"] req_rx = " << req_rx[i].read() << " current_level_rx " << current_level_rx[i] << endl;
-		cout << "[R " << local_id <<"] buffer is full? " << buffer[i].IsFull() << endl;
+		cout << "[ROUTER " << local_id <<"] rxProcess can receive from dir " << i << " with non-empty buffer" << endl;
 		TPacket received_packet = packet_rx[i].read();
 
 		if(TGlobalParams::verbose_mode > VERBOSE_OFF)
@@ -67,6 +67,9 @@ void TRouter::txProcess()
 	{
 	  req_tx[i].write(0);
 	  current_level_tx[i] = 0;
+	  // DiSR
+	  if (TGlobalParams::disr)
+	      resetDiSR();
 	}
     }
   else
@@ -80,30 +83,21 @@ void TRouter::txProcess()
 	    {
 	      cout << "[ROUTER " << local_id <<"] txProcess: buffer["<<i<<"] not empty" << endl;
 	      TPacket packet = buffer[i].Front();
+	      packet.dir_in = i;
 
-	      if (packet.type==PACKET_SEG_REQUEST) 
+	      int o = process(packet);
+
+	      if (reservation_table.isAvailable(o))
 		{
-		  // prepare data for routing
-		  TRouteData route_data;
-		  route_data.current_id = local_id;
-		  route_data.src_id = packet.src_id;
-		  route_data.dst_id = packet.dst_id;
-		  route_data.dir_in = i;
-
-		  int o = route(route_data);
-
-		  if (reservation_table.isAvailable(o))
+		    cout << "[ROUTER " << local_id << "]:txProcess reservation_table available with i="<<i<<",o="<<o<<endl;
+		  reservation_table.reserve(i, o);
+		  if(TGlobalParams::verbose_mode > VERBOSE_OFF)
 		    {
-			cout << "[ROUTER " << local_id << "]:txProcess reservation_table is available with i="<<i<<",o="<<o<<endl;
-		      reservation_table.reserve(i, o);
-		      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
-			{
-			  cout << sc_time_stamp().to_double()/1000 
-			       << ": Router[" << local_id 
-			       << "], Input[" << i << "] (" << buffer[i].Size() << " packets)" 
-			       << ", reserved Output[" << o << "], packet: " << packet << endl;
-			}		      
-		    }
+		      cout << sc_time_stamp().to_double()/1000 
+			   << ": Router[" << local_id 
+			   << "], Input[" << i << "] (" << buffer[i].Size() << " packets)" 
+			   << ", reserved Output[" << o << "], packet: " << packet << endl;
+		    }		      
 		}
 	    }
 	}
@@ -146,12 +140,12 @@ void TRouter::txProcess()
 
 //---------------------------------------------------------------------------
 
-vector<int> TRouter::routingFunction(const TRouteData& route_data) 
+vector<int> TRouter::routingFunction(const TPacket& p) 
 {
-  TCoord position  = id2Coord(route_data.current_id);
-  TCoord src_coord = id2Coord(route_data.src_id);
-  TCoord dst_coord = id2Coord(route_data.dst_id);
-  int dir_in = route_data.dir_in;
+  TCoord position  = id2Coord(local_id);
+  TCoord src_coord = id2Coord(p.src_id);
+  TCoord dst_coord = id2Coord(p.dst_id);
+  int dir_in = p.dir_in;
 
   switch (TGlobalParams::routing_algorithm)
     {
@@ -169,16 +163,58 @@ vector<int> TRouter::routingFunction(const TRouteData& route_data)
 
 //---------------------------------------------------------------------------
 
-int TRouter::route(const TRouteData& route_data)
+int TRouter::process(const TPacket& p)
 {
 
-  if (route_data.dst_id == local_id)
-    return DIRECTION_LOCAL;
+    // DiSR setup traffic management
+    // TODO: make it in a better way...
+    if (TGlobalParams::DiSR)
+    {
+	return processDiSR(p);
+    }
 
-  vector<int> candidate_channels = routingFunction(route_data);
+    //deliver to local PE
+    if (p.dst_id == local_id)
+	return DIRECTION_LOCAL;
 
-  // TODO: check if ok for YX
-  return candidate_channels[0];
+    // ...leaved for future compatibility with adaptive routing
+    vector<int> candidate_channels = routingFunction(p);
+
+    // TODO: check if ok for YX
+    return candidate_channels[0];
+}
+
+int TRouter::processDiSR(const TPacket& p)
+{
+    if (p.type == PACKET_SEG_REQUEST)
+    {
+	cout << "["<<local_id<<"]: received SEG REQUEST!" << endl;
+    }
+
+    return DIRECTION_NORTH;
+}
+
+void TRouter::DiSR_update_status()
+{
+    static int x = 0;
+
+    if (local_id==0)
+    {
+	if (x==0)
+	{
+	    TPacket packet;
+	    packet.src_id = local_id;
+	    packet.type = PACKET_SEG_REQUEST;
+	    packet.dir_in = DIRECTION_LOCAL;
+
+	    cout << "["<<local_id<<"]:Injecting SEG_REQUEST packet!!" << endl;
+	    req_rx[DIRECTION_LOCAL].write(1-current_level_rx[DIRECTION_LOCAL]);
+	    packet_rx[DIRECTION_LOCAL].write(packet);
+	}
+
+    }
+
+
 }
 
 
@@ -258,5 +294,22 @@ int TRouter::getNeighborId(int _id, int direction) const
 
   return neighbor_id;
 }
+
+void TRouter::resetDiSR()
+{
+    DiSR_data.visited=0;
+    DiSR_data.tvisited=0;
+    for (int i =0;i<DIRECTIONS;i++)
+    {
+	DiSR_data.link_visited[4];
+	DiSR_data.link_tvisited[4];
+    }
+
+    DiSR_data.starting = 0;
+    DiSR_data.terminal = 0;
+    DiSR_data.segment = 0;
+    DiSR_data.subnet = 0;
+}
+
 
 //---------------------------------------------------------------------------

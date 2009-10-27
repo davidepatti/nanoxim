@@ -63,14 +63,23 @@ SC_MODULE(TRouter)
  private:
 
   // performs actual routing + selection
-  int route(const TRouteData& route_data);
+  int process(const TPacket& p);
+  vector<int> routingFunction(const TPacket& p);
 
-  vector<int> routingFunction(const TRouteData& route_data);
+  // Distribuited SR 
+  void resetDiSR();
+  int processDiSR(const TPacket& p);
+  void DiSR_update_status();
+
 
   // routing functions
   vector<int> routingXY(const TCoord& current, const TCoord& destination);
   int reflexDirection(int direction) const;
   int getNeighborId(int _id,int direction) const;
+
+  // DiSR data 
+  TDiSR_data DiSR_data;
+
 
 };
 
