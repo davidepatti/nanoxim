@@ -21,14 +21,16 @@ void TRouter::rxProcess()
     }
     else
     {
+	// NB:when performing DiSR setup, new packets are buffered in
+	// local PE buffer
+	if (TGlobalParams::disr) 
+	    DiSR_update_status();
 	// For each channel decide if a new packet can be accepted
 	//
 	// This process simply sees a flow of incoming packets. All arbitration related issues are addressed in the txProcess()
 
 	for(int i=0; i<DIRECTIONS+1; i++)
 	{
-	    if (TGlobalParams::disr) DiSR_update_status();
-
 	    // To accept a new packet, the following conditions must match:
 	    //
 	    // 1) there is an incoming request
@@ -49,7 +51,6 @@ void TRouter::rxProcess()
 
 		// Negate the old value for Alternating Bit Protocol (ABP)
 		current_level_rx[i] = 1-current_level_rx[i];
-
 	    }
 	    ack_rx[i].write(current_level_rx[i]);
 	}
@@ -145,7 +146,6 @@ vector<int> TRouter::routingFunction(const TPacket& p)
   TCoord position  = id2Coord(local_id);
   TCoord src_coord = id2Coord(p.src_id);
   TCoord dst_coord = id2Coord(p.dst_id);
-  int dir_in = p.dir_in;
 
   switch (TGlobalParams::routing_algorithm)
     {
@@ -168,7 +168,7 @@ int TRouter::process(const TPacket& p)
 
     // DiSR setup traffic management
     // TODO: make it in a better way...
-    if (TGlobalParams::DiSR)
+    if (TGlobalParams::disr)
     {
 	return processDiSR(p);
     }
@@ -191,7 +191,7 @@ int TRouter::processDiSR(const TPacket& p)
 	cout << "["<<local_id<<"]: received SEG REQUEST!" << endl;
     }
 
-    return DIRECTION_NORTH;
+    return DIRECTION_SOUTH;
 }
 
 void TRouter::DiSR_update_status()
@@ -207,14 +207,17 @@ void TRouter::DiSR_update_status()
 	    packet.type = PACKET_SEG_REQUEST;
 	    packet.dir_in = DIRECTION_LOCAL;
 
-	    cout << "["<<local_id<<"]:Injecting SEG_REQUEST packet!!" << endl;
-	    req_rx[DIRECTION_LOCAL].write(1-current_level_rx[DIRECTION_LOCAL]);
-	    packet_rx[DIRECTION_LOCAL].write(packet);
+	    if (!buffer[DIRECTION_LOCAL].IsFull())
+	    {
+		cout << "["<<local_id<<"]:Injecting SEG_REQUEST packet!!" << endl;
+		buffer[DIRECTION_LOCAL].Push(packet);
+		x++;
+	    }
+	    else
+		cout << "["<<local_id<<"]:cant Inject SEG_REQUEST (buffer full)" << endl;
 	}
 
     }
-
-
 }
 
 
@@ -301,8 +304,8 @@ void TRouter::resetDiSR()
     DiSR_data.tvisited=0;
     for (int i =0;i<DIRECTIONS;i++)
     {
-	DiSR_data.link_visited[4];
-	DiSR_data.link_tvisited[4];
+	DiSR_data.link_visited[i] = 0;
+	DiSR_data.link_tvisited[i] = 0;
     }
 
     DiSR_data.starting = 0;
