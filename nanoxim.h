@@ -17,6 +17,7 @@ using namespace std;
 #define DIRECTION_SOUTH        2
 #define DIRECTION_WEST         3
 #define DIRECTION_LOCAL        4
+#define DIRECTION_ALL	       99
 
 // Generic not reserved resource
 #define NOT_RESERVED          -2
@@ -82,8 +83,9 @@ class TCoord
 // Packet type
 enum TPacketType
 {
-  PACKET_SEG_REQUEST,PACKET_SEG_CONFIRM,PACKET_SEG_CANCEL
+  FIRST_SEG_REQUEST,SEG_REQUEST,SEG_CONFIRM,SEG_CANCEL
 };
+
 
 //---------------------------------------------------------------------------
 // TPayload -- Payload definition
@@ -130,6 +132,7 @@ struct TPacket
   double             timestamp;    // Unix timestamp at packet generation
   int                hop_no;       // Current number of hops from source to destination
   int 		     dir_in;       // The direction it came from
+  int 	        dir_out; // direction to which the packet is forwarded
   inline bool operator == (const TPacket& packet) const
   {
     return (packet.src_id==src_id && packet.type==type && packet.payload==payload && packet.hop_no==hop_no);
@@ -139,6 +142,13 @@ struct TPacket
 
 //---------------------------------------------------------------------------
 // Distribuited SR data
+
+enum disr_status { INITIAL,
+       SEARCH_FIRST_SEG,
+       SENT_FIRST_SEG_REQ,
+       SEARCH_OTHER_SEG, 
+       END_SEARCH
+     };
 
 struct TDiSR_data
 {
@@ -155,6 +165,9 @@ struct TDiSR_data
     int terminal;
     int segment;
     int subnet;
+    int current_link;
+    enum disr_status status;
+
 };
 
 
@@ -170,9 +183,10 @@ inline ostream& operator << (ostream& os, const TPacket& packet)
       os << "Source Node[" << packet.src_id << "]" << endl;
       switch(packet.type)
       {
-	case PACKET_SEG_REQUEST: os << "Packet Type is REQUEST" << endl; break;
-	case PACKET_SEG_CONFIRM: os << "Packet Type is CONFIRM" << endl; break;
-	case PACKET_SEG_CANCEL: os << "Packet Type is CANCEL" << endl; break;
+	case FIRST_SEG_REQUEST: os << "Packet Type is FIRST_SEG_REQUEST" << endl; break;
+	case SEG_REQUEST: os << "Packet Type is SEG_REQUEST" << endl; break;
+	case SEG_CONFIRM: os << "Packet Type is SEG_CONFIRM" << endl; break;
+	case SEG_CANCEL: os << "Packet Type is SEG_CANCEL" << endl; break;
       }
       os << "Total number of hops:" << packet.hop_no << endl;
   }

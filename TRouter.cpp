@@ -88,6 +88,12 @@ void TRouter::txProcess()
 
 	      int o = process(packet);
 
+	      if (o == DIRECTION_ALL)
+	      {
+		    cout << "[ROUTER " << local_id << "]:txProcess should broadcast packet with id " << packet.src_id << endl; 
+	      }
+	      else
+
 	      if (reservation_table.isAvailable(o))
 		{
 		    cout << "[ROUTER " << local_id << "]:txProcess reservation_table available with i="<<i<<",o="<<o<<endl;
@@ -128,8 +134,8 @@ void TRouter::txProcess()
 		      req_tx[o].write(current_level_tx[o]);
 		      buffer[i].Pop();
 
-		      if (packet.type == PACKET_SEG_REQUEST) 
-			reservation_table.release(o);
+		      // TODO: always release ?
+		    reservation_table.release(o);
 			
 		      // Update stats
 		    }
@@ -186,37 +192,76 @@ int TRouter::process(const TPacket& p)
 
 int TRouter::processDiSR(const TPacket& p)
 {
-    if (p.type == PACKET_SEG_REQUEST)
+    if ( (p.type == FIRST_SEG_REQUEST) && (p.src_id!=local_id) )
     {
-	cout << "["<<local_id<<"]: received SEG REQUEST!" << endl;
+	cout << "["<<local_id<<"]: received FIRST SEG REQUEST with ID " << p.src_id << endl;
+	return DIRECTION_ALL;
     }
 
     return DIRECTION_SOUTH;
 }
 
+int TRouter::DiSR_next_free_link()
+{
+    while (DiSR_data.current_link<DIRECTION_LOCAL)
+    {
+
+	if ( (!DiSR_data.link_visited[DiSR_data.current_link]) && (!DiSR_data.link_tvisited[DiSR_data.current_link]))
+	    return DiSR_data.current_link++;
+	DiSR_data.current_link++;
+    }
+
+    return NOT_VALID;
+}
+
+void TRouter::inject_to_network(const TPacket& p)
+{
+
+    if (!buffer[DIRECTION_LOCAL].IsFull())
+    {
+	cout << "["<<local_id<<"]:Injecting packet!!" << endl;
+	buffer[DIRECTION_LOCAL].Push(p);
+    }
+    else
+	cout << "["<<local_id<<"]:cant Inject packet (buffer full)" << endl;
+}
+
+
+void TRouter::DiSR_search_first_segment()
+{
+	DiSR_data.status = SEARCH_FIRST_SEG;
+	int candidate_link = DiSR_next_free_link();
+
+	if (candidate_link!=NOT_VALID)
+	{
+	    cout << "["<<local_id<<"]:Injecting FIRST_SEG_REQUEST on link " << candidate_link << endl;
+	    // prepare the packet
+	    TPacket packet;
+	    packet.src_id = local_id;
+	    packet.type = FIRST_SEG_REQUEST;
+	    packet.dir_in = DIRECTION_LOCAL;
+	    packet.dir_out = candidate_link;
+	    packet.hop_no = 0;
+	    inject_to_network(packet);
+	}
+	else
+	{
+	    cout << "["<<local_id<<"]:cant Inject FIRST_SEG_REQUEST (no suitable links)" << endl;
+	    DiSR_data.status = END_SEARCH;
+	}
+
+}
+
 void TRouter::DiSR_update_status()
 {
-    static int x = 0;
 
     if (local_id==0)
     {
-	if (x==0)
-	{
-	    TPacket packet;
-	    packet.src_id = local_id;
-	    packet.type = PACKET_SEG_REQUEST;
-	    packet.dir_in = DIRECTION_LOCAL;
-
-	    if (!buffer[DIRECTION_LOCAL].IsFull())
-	    {
-		cout << "["<<local_id<<"]:Injecting SEG_REQUEST packet!!" << endl;
-		buffer[DIRECTION_LOCAL].Push(packet);
-		x++;
-	    }
-	    else
-		cout << "["<<local_id<<"]:cant Inject SEG_REQUEST (buffer full)" << endl;
+	if (DiSR_data.status == INITIAL)
+	{ 
+	    //must search for first segment
+	    DiSR_search_first_segment();
 	}
-
     }
 }
 
@@ -245,6 +290,7 @@ void TRouter::configure(const int _id, const unsigned int _max_buffer_size)
 {
   local_id = _id;
   start_from_port = DIRECTION_LOCAL;
+  
 
   for (int i=0; i<DIRECTIONS+1; i++)
     buffer[i].SetMaxBufferSize(_max_buffer_size);
@@ -312,6 +358,8 @@ void TRouter::resetDiSR()
     DiSR_data.terminal = 0;
     DiSR_data.segment = 0;
     DiSR_data.subnet = 0;
+    DiSR_data.current_link = DIRECTION_NORTH;
+    DiSR_data.status = INITIAL;
 }
 
 
