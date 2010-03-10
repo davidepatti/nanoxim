@@ -70,6 +70,8 @@ SC_MODULE(TRouter)
   void resetDiSR();
   int processDiSR(const TPacket& p);
   void DiSR_update_status();
+  void DiSR_search_first_segment();
+  int DiSR_next_free_link();
 
 
   // routing functions
@@ -77,9 +79,10 @@ SC_MODULE(TRouter)
   int reflexDirection(int direction) const;
   int getNeighborId(int _id,int direction) const;
 
+  void inject_to_network(const TPacket& p);
+
   // DiSR data 
   TDiSR_data DiSR_data;
-
 
 };
 

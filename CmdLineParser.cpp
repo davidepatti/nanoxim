@@ -14,6 +14,7 @@ void showHelp(char selfname[])
   cout << "\t-dimy N\t\tSet the mesh Y dimension to the specified integer value (default " << DEFAULT_MESH_DIM_Y << ")" << endl;
   cout << "\t-routing TYPE\tSet the routing algorithm to TYPE where TYPE is one of the following (default " << ROUTING_XY << "):" << endl;
   cout << "\t-sim N\t\tRun for the specified simulation time [cycles] (default " << DEFAULT_SIMULATION_TIME << ")" << endl << endl;
+  cout << "\t-disr - Run setup for distribuited Segment-base Routing" << endl;
 }
 
 //---------------------------------------------------------------------------
