@@ -79,12 +79,6 @@ class TCoord
   }
 };
 
-//---------------------------------------------------------------------------
-// Packet type
-enum TPacketType
-{
-  FIRST_SEG_REQUEST,SEG_REQUEST,SEG_CONFIRM,SEG_CANCEL
-};
 
 
 //---------------------------------------------------------------------------
@@ -120,6 +114,15 @@ struct TChannelStatus
     };
 };
 
+//---------------------------------------------------------------------------
+// Packet type
+enum TPacketType
+{
+  STARTING_SEGMENT_REQUEST,
+  SEGMENT_REQUEST,
+  SEGMENT_CONFIRM,
+  SEGMENT_CANCEL
+};
 
 //---------------------------------------------------------------------------
 // TPacket -- Packet definition
@@ -140,36 +143,6 @@ struct TPacket
 
 };
 
-//---------------------------------------------------------------------------
-// Distribuited SR data
-
-enum disr_status { INITIAL,
-       SEARCH_FIRST_SEG,
-       SENT_FIRST_SEG_REQ,
-       SEARCH_OTHER_SEG, 
-       END_SEARCH
-     };
-
-struct TDiSR_data
-{
-    //an ID that corresponds to some segment the node belongs to or
-    //it's candidate to belong. If 0, node is not visited/tvisited
-    int visited;
-    int tvisited;
-
-    // intented as bidirectional!
-    int link_visited[4];
-    int link_tvisited[4];
-
-    int starting;
-    int terminal;
-    int segment;
-    int subnet;
-    int current_link;
-    enum disr_status status;
-
-};
-
 
 // output redefinitions *******************************************
 
@@ -183,10 +156,10 @@ inline ostream& operator << (ostream& os, const TPacket& packet)
       os << "Source Node[" << packet.src_id << "]" << endl;
       switch(packet.type)
       {
-	case FIRST_SEG_REQUEST: os << "Packet Type is FIRST_SEG_REQUEST" << endl; break;
-	case SEG_REQUEST: os << "Packet Type is SEG_REQUEST" << endl; break;
-	case SEG_CONFIRM: os << "Packet Type is SEG_CONFIRM" << endl; break;
-	case SEG_CANCEL: os << "Packet Type is SEG_CANCEL" << endl; break;
+	case STARTING_SEGMENT_REQUEST: os << "Packet Type is STARTING_SEGMENT_REQUEST" << endl; break;
+	case SEGMENT_REQUEST: os << "Packet Type is SEGMENT_REQUEST" << endl; break;
+	case SEGMENT_CONFIRM: os << "Packet Type is SEGMENT_CONFIRM" << endl; break;
+	case SEGMENT_CANCEL: os << "Packet Type is SEGMENT_CANCEL" << endl; break;
       }
       os << "Total number of hops:" << packet.hop_no << endl;
   }

@@ -1,4 +1,4 @@
-TARGET_ARCH = linux
+TARGET_ARCH = linux64
 CC     = g++
 OPT    = -O2 # -O3
 DEBUG  = -g
@@ -8,7 +8,7 @@ CFLAGS = $(OPT) $(OTHER)
 
 MODULE = nanoxim
 SRCS = TNet.cpp TRouter.cpp TProcessingElement.cpp TBuffer.cpp \
-	TReservationTable.cpp CmdLineParser.cpp main.cpp
+	TReservationTable.cpp CmdLineParser.cpp DiSR.cpp main.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 include ./Makefile.defs

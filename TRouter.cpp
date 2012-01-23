@@ -24,7 +24,7 @@ void TRouter::rxProcess()
 	// NB:when performing DiSR setup, new packets are buffered in
 	// local PE buffer
 	if (TGlobalParams::disr) 
-	    DiSR_update_status();
+	    DiSR.update_status();
 	// For each channel decide if a new packet can be accepted
 	//
 	// This process simply sees a flow of incoming packets. All arbitration related issues are addressed in the txProcess()
@@ -69,8 +69,7 @@ void TRouter::txProcess()
 	  req_tx[i].write(0);
 	  current_level_tx[i] = 0;
 	  // DiSR
-	  if (TGlobalParams::disr)
-	      resetDiSR();
+	  if (TGlobalParams::disr) DiSR.reset();
 	}
     }
   else
@@ -176,7 +175,7 @@ int TRouter::process(const TPacket& p)
     // TODO: make it in a better way...
     if (TGlobalParams::disr)
     {
-	return processDiSR(p);
+	return DiSR.process(p);
     }
 
     //deliver to local PE
@@ -190,29 +189,7 @@ int TRouter::process(const TPacket& p)
     return candidate_channels[0];
 }
 
-int TRouter::processDiSR(const TPacket& p)
-{
-    if ( (p.type == FIRST_SEG_REQUEST) && (p.src_id!=local_id) )
-    {
-	cout << "["<<local_id<<"]: received FIRST SEG REQUEST with ID " << p.src_id << endl;
-	return DIRECTION_ALL;
-    }
 
-    return DIRECTION_SOUTH;
-}
-
-int TRouter::DiSR_next_free_link()
-{
-    while (DiSR_data.current_link<DIRECTION_LOCAL)
-    {
-
-	if ( (!DiSR_data.link_visited[DiSR_data.current_link]) && (!DiSR_data.link_tvisited[DiSR_data.current_link]))
-	    return DiSR_data.current_link++;
-	DiSR_data.current_link++;
-    }
-
-    return NOT_VALID;
-}
 
 void TRouter::inject_to_network(const TPacket& p)
 {
@@ -227,43 +204,6 @@ void TRouter::inject_to_network(const TPacket& p)
 }
 
 
-void TRouter::DiSR_search_first_segment()
-{
-	DiSR_data.status = SEARCH_FIRST_SEG;
-	int candidate_link = DiSR_next_free_link();
-
-	if (candidate_link!=NOT_VALID)
-	{
-	    cout << "["<<local_id<<"]:Injecting FIRST_SEG_REQUEST on link " << candidate_link << endl;
-	    // prepare the packet
-	    TPacket packet;
-	    packet.src_id = local_id;
-	    packet.type = FIRST_SEG_REQUEST;
-	    packet.dir_in = DIRECTION_LOCAL;
-	    packet.dir_out = candidate_link;
-	    packet.hop_no = 0;
-	    inject_to_network(packet);
-	}
-	else
-	{
-	    cout << "["<<local_id<<"]:cant Inject FIRST_SEG_REQUEST (no suitable links)" << endl;
-	    DiSR_data.status = END_SEARCH;
-	}
-
-}
-
-void TRouter::DiSR_update_status()
-{
-
-    if (local_id==0)
-    {
-	if (DiSR_data.status == INITIAL)
-	{ 
-	    //must search for first segment
-	    DiSR_search_first_segment();
-	}
-    }
-}
 
 
 //---------------------------------------------------------------------------
@@ -344,23 +284,7 @@ int TRouter::getNeighborId(int _id, int direction) const
   return neighbor_id;
 }
 
-void TRouter::resetDiSR()
-{
-    DiSR_data.visited=0;
-    DiSR_data.tvisited=0;
-    for (int i =0;i<DIRECTIONS;i++)
-    {
-	DiSR_data.link_visited[i] = 0;
-	DiSR_data.link_tvisited[i] = 0;
-    }
 
-    DiSR_data.starting = 0;
-    DiSR_data.terminal = 0;
-    DiSR_data.segment = 0;
-    DiSR_data.subnet = 0;
-    DiSR_data.current_link = DIRECTION_NORTH;
-    DiSR_data.status = INITIAL;
-}
 
 
 //---------------------------------------------------------------------------
