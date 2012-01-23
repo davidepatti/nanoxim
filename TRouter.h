@@ -11,6 +11,7 @@
 #include <systemc.h>
 #include "nanoxim.h"
 #include "TBuffer.h"
+#include "DiSR.h"
 #include "TReservationTable.h"
 
 SC_MODULE(TRouter)
@@ -66,12 +67,7 @@ SC_MODULE(TRouter)
   int process(const TPacket& p);
   vector<int> routingFunction(const TPacket& p);
 
-  // Distribuited SR 
-  void resetDiSR();
-  int processDiSR(const TPacket& p);
-  void DiSR_update_status();
-  void DiSR_search_first_segment();
-  int DiSR_next_free_link();
+  DiSR disr;
 
 
   // routing functions
@@ -81,8 +77,6 @@ SC_MODULE(TRouter)
 
   void inject_to_network(const TPacket& p);
 
-  // DiSR data 
-  TDiSR_data DiSR_data;
 
 };
 
