@@ -24,7 +24,7 @@ void TRouter::rxProcess()
 	// NB:when performing DiSR setup, new packets are buffered in
 	// local PE buffer
 	//
-	//if (TGlobalParams::disr) DiSR.update_status();
+	if (TGlobalParams::disr) disr.update_status();
 	//
 	// For each channel decide if a new packet can be accepted
 	//
@@ -70,7 +70,7 @@ void TRouter::txProcess()
 	  req_tx[i].write(0);
 	  current_level_tx[i] = 0;
 	  // DiSR
-	  //if (TGlobalParams::disr) DiSR.reset();
+	  if (TGlobalParams::disr) this->disr.reset();
 	}
     }
   else
@@ -176,7 +176,7 @@ int TRouter::process(const TPacket& p)
     // TODO: make it in a better way...
     if (TGlobalParams::disr)
     {
-	//return DiSR.process(p);
+	return this->disr.process(p);
     }
 
     //deliver to local PE
@@ -230,6 +230,7 @@ vector<int> TRouter::routingXY(const TCoord& current, const TCoord& destination)
 void TRouter::configure(const int _id, const unsigned int _max_buffer_size)
 {
   local_id = _id;
+  this->disr.set_router(this);
   start_from_port = DIRECTION_LOCAL;
   
 

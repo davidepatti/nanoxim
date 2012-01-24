@@ -9,8 +9,10 @@
 //---------------------------------------------------------------------------
 
 #include <systemc.h>
-#include "TRouter.h"
+//#include "TRouter.h"
 #include "nanoxim.h"
+
+class TRouter;
 
 enum DiSR_status { BOOTSTRAP,READY_SEARCHING, ACTIVE_SEARCHING, CANDIDATE, ASSIGNED, FREE };
 //

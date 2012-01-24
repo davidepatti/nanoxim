@@ -4,6 +4,7 @@
 
 *****************************************************************************/
 #include "DiSR.h"
+#include "TRouter.h"
 
 //---------------------------------------------------------------------------
 
@@ -21,13 +22,14 @@ TSegmentId::TSegmentId()
 
 void DiSR::set_router(TRouter * r)
 {
+    this->router = r;
+    cout << "[DiSR on node "<<router->local_id<<"]: setting router id to " << r->local_id << endl;
     // To test the model, the node 0 is always used for bootstrapping 
     // the whole algorithm
     if (r->local_id == 0) 
 	status = BOOTSTRAP;
     else
 	status = FREE;
-    this->router = r;
 }
 
 int DiSR::process(const TPacket& p)
@@ -43,6 +45,7 @@ int DiSR::process(const TPacket& p)
 
 int DiSR::next_free_link()
 {
+    cout << "[DiSR on node "<<router->local_id<<"]: CALL next_free_link() " << endl;
     while (current_link<DIRECTION_LOCAL)
     {
 
@@ -53,6 +56,7 @@ int DiSR::next_free_link()
 	}
 	current_link++;
     }
+    cout << "[DiSR on node "<<router->local_id<<"]: MSG no link found " << endl;
 
     return NOT_VALID;
 }
