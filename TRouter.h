@@ -11,8 +11,9 @@
 #include <systemc.h>
 #include "nanoxim.h"
 #include "TBuffer.h"
-//#include "DiSR.h"
+#include "DiSR.h"
 #include "TReservationTable.h"
+
 
 SC_MODULE(TRouter)
 {
@@ -68,7 +69,8 @@ SC_MODULE(TRouter)
   int process(const TPacket& p);
   vector<int> routingFunction(const TPacket& p);
 
-  //DiSR disr;
+  // DiSR component implementing algorithm locally
+  DiSR disr;
 
 
   // routing functions
