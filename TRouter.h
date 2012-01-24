@@ -11,7 +11,7 @@
 #include <systemc.h>
 #include "nanoxim.h"
 #include "TBuffer.h"
-#include "DiSR.h"
+//#include "DiSR.h"
 #include "TReservationTable.h"
 
 SC_MODULE(TRouter)
@@ -47,6 +47,7 @@ SC_MODULE(TRouter)
   void               rxProcess();        // The receiving process
   void               txProcess();        // The transmitting process
   void               configure(const int _id, const unsigned int _max_buffer_size);
+  void inject_to_network(const TPacket& p);
 
   // Constructor
 
@@ -61,13 +62,13 @@ SC_MODULE(TRouter)
     sensitive << clock.pos();
   }
 
- private:
 
+ private:
   // performs actual routing + selection
   int process(const TPacket& p);
   vector<int> routingFunction(const TPacket& p);
 
-  DiSR disr;
+  //DiSR disr;
 
 
   // routing functions
@@ -75,7 +76,6 @@ SC_MODULE(TRouter)
   int reflexDirection(int direction) const;
   int getNeighborId(int _id,int direction) const;
 
-  void inject_to_network(const TPacket& p);
 
 
 };
