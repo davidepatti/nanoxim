@@ -90,7 +90,7 @@ TPacket TProcessingElement::nextPacket()
   //  packet.payload     = DEFAULT_PAYLOAD;
   //  */
 
-  packet.type = SEG_REQUEST;
+  //packet.type = SEGMENT_REQUEST;
   
   packet_queue.pop();
 

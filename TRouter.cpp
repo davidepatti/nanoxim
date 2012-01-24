@@ -23,8 +23,9 @@ void TRouter::rxProcess()
     {
 	// NB:when performing DiSR setup, new packets are buffered in
 	// local PE buffer
-	if (TGlobalParams::disr) 
-	    DiSR.update_status();
+	//
+	//if (TGlobalParams::disr) DiSR.update_status();
+	//
 	// For each channel decide if a new packet can be accepted
 	//
 	// This process simply sees a flow of incoming packets. All arbitration related issues are addressed in the txProcess()
@@ -69,7 +70,7 @@ void TRouter::txProcess()
 	  req_tx[i].write(0);
 	  current_level_tx[i] = 0;
 	  // DiSR
-	  if (TGlobalParams::disr) DiSR.reset();
+	  //if (TGlobalParams::disr) DiSR.reset();
 	}
     }
   else
@@ -175,7 +176,7 @@ int TRouter::process(const TPacket& p)
     // TODO: make it in a better way...
     if (TGlobalParams::disr)
     {
-	return DiSR.process(p);
+	//return DiSR.process(p);
     }
 
     //deliver to local PE
