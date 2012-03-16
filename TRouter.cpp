@@ -88,9 +88,27 @@ void TRouter::txProcess()
 
 	      int o = process(packet);
 
+	      // broadcast required
 	      if (o == DIRECTION_ALL)
 	      {
-		    cout << "[ROUTER " << local_id << "]:txProcess should broadcast packet with id " << packet.src_id << endl; 
+		    cout << "[ROUTER " << local_id << "]:txProcess broadcasting packet with id " << packet.src_id << endl; 
+		    for (int d=0;d<DIRECTIONS+1;d++)
+		    {
+			  if (reservation_table.isAvailable(d))
+			  {
+			      cout << "[ROUTER " << local_id << "]:txProcess (broadcasting) reservation_table available with i="<<i<<",o="<<d<<endl;
+			      reservation_table.reserve(i, d);
+			      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
+			      {
+				  cout << sc_time_stamp().to_double()/1000 
+				      << ": Router[" << local_id 
+				      << "], Input[" << i << "] (" << buffer[i].Size() << " packets)" 
+				      << ", reserved Output[" << d << "], packet: " << packet << endl;
+			      }		      
+			  }
+
+		  }
+
 	      }
 	      else
 

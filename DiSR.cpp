@@ -3,7 +3,7 @@
   DiSR.cpp -- DiSR algorithm model implementation
 
 *****************************************************************************/
-#include "DiSR.h"
+#include "nanoxim.h"
 #include "TRouter.h"
 
 //---------------------------------------------------------------------------
@@ -26,6 +26,7 @@ void DiSR::set_router(TRouter * r)
     cout << "[DiSR on node "<<router->local_id<<"]: setting router id to " << r->local_id << endl;
     // To test the model, the node 0 is always used for bootstrapping 
     // the whole algorithm
+    // Whener the router pointer is updated, status must be resetted
     if (r->local_id == 0) 
 	status = BOOTSTRAP;
     else
@@ -34,6 +35,7 @@ void DiSR::set_router(TRouter * r)
 
 int DiSR::process(const TPacket& p)
 {
+    cout << "[DiSR on node "<<router->local_id<<"]: CALL process" << endl;
     if ( (p.type == STARTING_SEGMENT_REQUEST) && (p.src_id!=router->local_id) )
     {
 	cout << "[DiSR on node "<<router->local_id<<"]: received STARTING SEG REQUEST with ID " << p.src_id << endl;
@@ -68,37 +70,86 @@ void DiSR::search_starting_segment()
 	if (candidate_link!=NOT_VALID)
 	{
 	    status = ACTIVE_SEARCHING;
-	    cout << "[DiSR on "<<router->local_id<<"]:Injecting STARTING_SEGMENT_REQUEST on link " << candidate_link << endl;
+	    cout << "[DiSR on "<<router->local_id<<"] injecting STARTING_SEGMENT_REQUEST on link " << candidate_link << endl;
+	    TSegmentId segment_id(router->local_id,candidate_link);
+
+	    // mark the link and the node with id of segment request
+	    link_tvisited[candidate_link] = segment_id;
+	    visited = segment_id;
+
 	    // prepare the packet
 	    TPacket packet;
+	    packet.id = segment_id;
 	    packet.src_id = router->local_id;
 	    packet.type = STARTING_SEGMENT_REQUEST;
 	    packet.dir_in = DIRECTION_LOCAL;
 	    packet.dir_out = candidate_link;
 	    packet.hop_no = 0;
+
 	    router->inject_to_network(packet);
 	}
 	else
 	{
-	    cout << "[DiSR on "<<router->local_id<<"]:cant Inject STARTING_SEGMENT_REQUEST (no suitable links)" << endl;
+	    cout << "[DiSR on "<<router->local_id<<"]:cant inject STARTING_SEGMENT_REQUEST (no suitable links)" << endl;
 	}
+
+}
+
+void DiSR::print_status() const
+{
+    if (this->router!=NULL)
+    {
+	switch (this->status) {
+	    case BOOTSTRAP:
+		cout << "[DiSR on "<<router->local_id<<"] current status:  BOOTSTRAP" << endl;
+		break;
+	    case READY_SEARCHING:
+		cout << "[DiSR on "<<router->local_id<<"] current status:  READY_SEARCHING" << endl;
+		break;
+	    case ACTIVE_SEARCHING:
+		cout << "[DiSR on "<<router->local_id<<"] current status:  ACTIVE_SEARCHING" << endl;
+		break;
+	    case CANDIDATE:
+		cout << "[DiSR on "<<router->local_id<<"] current status:  CANDIDATE" << endl;
+		break;
+	    case ASSIGNED:
+		cout << "[DiSR on "<<router->local_id<<"] current status:  ASSIGNED" << endl;
+		break;
+	    case FREE:
+		cout << "[DiSR on "<<router->local_id<<"] current status:  FREE" << endl;
+		break;
+	    default:
+		cout << "[DiSR on "<<router->local_id<<"] current status:  NOTVALID!!" << endl;
+		exit(0);
+	}
+    }
+    else
+    {
+		cout << "[DiSR on "<<router->local_id<<"] print_status:  ERROR, router not set" << endl;
+    }
+
+	    
 
 }
 
 void DiSR::update_status()
 {
+    cout << "[DiSR on "<<router->local_id<<"] updating DiSR status..." << endl;
+    print_status();
 
-    if (router->local_id==0)
-    {
-	if (status == BOOTSTRAP)
-
-	{ 
-	    cout << "[DiSR on "<<router->local_id<<"]: BOOSTRAP" << endl;
-	    cout << "[DiSR on "<<router->local_id<<"]: STARTING node setup, ready to inject STARTING_SEGMENT_REQUEST" << endl;
-	    //must search for starting segment
-	    search_starting_segment();
-	}
+    if (status == BOOTSTRAP)
+    { 
+	status = READY_SEARCHING;
+	cout << "[DiSR on "<<router->local_id<<"] starting node setup, ready to inject STARTING_SEGMENT_REQUEST" << endl;
+	//must search for starting segment
+	search_starting_segment();
     }
+
+    if (status == ACTIVE_SEARCHING)
+    {
+
+    }
+    print_status();
 }
 
 void DiSR::reset()
@@ -118,7 +169,13 @@ void DiSR::reset()
     terminal = false;
     subnet = NOT_VALID;
     current_link = DIRECTION_NORTH;
-    status = FREE;
+    // To test the model, the node 0 is always used for bootstrapping 
+    // the whole algorithm
+    // Whener the router pointer is updated, status must be resetted
+    if ((router!=NULL) && (router->local_id == 0)) 
+	status = BOOTSTRAP;
+    else
+	status = FREE;
 }
 
 bool DiSR::sanity_check()
