@@ -11,7 +11,6 @@
 #include <systemc.h>
 #include "nanoxim.h"
 #include "TBuffer.h"
-#include "DiSR.h"
 #include "TReservationTable.h"
 
 
