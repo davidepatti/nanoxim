@@ -145,10 +145,14 @@ class TSegmentId
 	    return ( (segid.node==node) && (segid.link==link));
 	}
 
-	inline bool isNull()
+	inline bool isFree()
 	{
-	    //assert(!((node == NOT_VALID) ^^ (link == NOT_VALID)));
-	    return ( (node == NOT_VALID) || (link == NOT_VALID));
+	    return ( (node == NOT_RESERVED) && (link == NOT_RESERVED));
+
+	}
+	inline bool isValid()
+	{
+	    return ( (node != NOT_VALID) && (link != NOT_VALID));
 
 	}
 
@@ -166,6 +170,7 @@ class DiSR
   void update_status();
   int process(const TPacket& p);
   void set_router(TRouter *);
+  void invalidate(int);
 
 
     private:
@@ -176,9 +181,9 @@ class DiSR
 
   // Local environment data (LED)
 
-  TSegmentId segment;
-  TSegmentId visited;
-  TSegmentId tvisited;
+  TSegmentId segID;
+  bool visited;
+  bool tvisited;
     // intented as bidirectional!
   TSegmentId link_visited[4];
   TSegmentId link_tvisited[4];
@@ -255,6 +260,17 @@ inline ostream& operator << (ostream& os, const TCoord& coord)
   return os;
 }
 
+inline ostream& operator << (ostream& os, TSegmentId& segid)
+{
+    if (segid.isFree())
+	os << "(.)";
+    else if (!segid.isValid())
+	os << "( )";
+    else
+      os << "(" << segid.node << "." << segid.link << ")";
+
+  return os;
+}
 
 // trace redefinitions *******************************************
 //

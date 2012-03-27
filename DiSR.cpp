@@ -16,8 +16,8 @@ TSegmentId::TSegmentId(int node,int link)
 
 TSegmentId::TSegmentId()
 {
-    this->node = NOT_VALID;
-    this->link = NOT_VALID;
+    this->node = NOT_RESERVED;
+    this->link = NOT_RESERVED;
 }
 
 void DiSR::set_router(TRouter * r)
@@ -35,11 +35,31 @@ void DiSR::set_router(TRouter * r)
 
 int DiSR::process(const TPacket& p)
 {
+    // TODO: check all cases
     cout << "[DiSR on node "<<router->local_id<<"]: CALL process" << endl;
-    if ( (p.type == STARTING_SEGMENT_REQUEST) && (p.src_id!=router->local_id) )
+
+    if (p.type == STARTING_SEGMENT_REQUEST )
     {
-	cout << "[DiSR on node "<<router->local_id<<"]: received STARTING SEG REQUEST with ID " << p.src_id << endl;
-	return DIRECTION_ALL;
+	TSegmentId pippo = p.id;
+	cout << "[DiSR on node "<<router->local_id << "]: processing STARTING SEG REQUEST with ID " << pippo << endl;
+
+	// foreign starting segment request, flooding ...
+	if ( p.src_id!=router->local_id )
+	{
+	    return DIRECTION_ALL;
+	}
+	else // processing a locally generated starting segment packet, 
+	     // inject to the link found by next_free_link()
+	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
+	{
+	    return p.dir_out;
+	}
+	else // the packet returned to its orginal source, confirm segment!
+	if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
+	{
+	    //cout << "[DiSR on node "<<router->local_id<<"]: confirming  STARTING SEG REQUEST " << p.id << endl;
+	    return DIRECTION_LOCAL; // TODO: check how packets are sinked
+	}
     }
 
     return DIRECTION_SOUTH;
@@ -51,9 +71,9 @@ int DiSR::next_free_link()
     while (current_link<DIRECTION_LOCAL)
     {
 
-	if ( (link_visited[current_link].isNull()) && (link_tvisited[current_link].isNull()))
+	if ( (link_visited[current_link].isFree()) && (link_tvisited[current_link].isFree()))
 	{
-	    cout << "[DiSR on node "<<router->local_id<<"]: found free link " << current_link+1 <<  endl;
+	    cout << "[DiSR on node "<<router->local_id<<"]: found free link " << current_link <<  endl;
 	    return current_link++;
 	}
 	current_link++;
@@ -65,17 +85,17 @@ int DiSR::next_free_link()
 
 void DiSR::search_starting_segment()
 {
+	visited = true;
 	int candidate_link = next_free_link();
 
 	if (candidate_link!=NOT_VALID)
 	{
+	    cout << "[DiSR on "<<router->local_id<<"] free link " << candidate_link << endl;
 	    status = ACTIVE_SEARCHING;
-	    cout << "[DiSR on "<<router->local_id<<"] injecting STARTING_SEGMENT_REQUEST on link " << candidate_link << endl;
 	    TSegmentId segment_id(router->local_id,candidate_link);
-
 	    // mark the link and the node with id of segment request
 	    link_tvisited[candidate_link] = segment_id;
-	    visited = segment_id;
+
 
 	    // prepare the packet
 	    TPacket packet;
@@ -86,11 +106,12 @@ void DiSR::search_starting_segment()
 	    packet.dir_out = candidate_link;
 	    packet.hop_no = 0;
 
+	    cout << "[DiSR on "<<router->local_id<<"] injecting STARTING_SEGMENT_REQUEST " << segment_id << " towards direction " << candidate_link << endl;
 	    router->inject_to_network(packet);
 	}
 	else
 	{
-	    cout << "[DiSR on "<<router->local_id<<"]:cant inject STARTING_SEGMENT_REQUEST (no suitable links)" << endl;
+	    cout << "[DiSR on "<<router->local_id<<"]: CRITICAL! cant inject STARTING_SEGMENT_REQUEST (no suitable links)" << endl;
 	}
 
 }
@@ -101,25 +122,26 @@ void DiSR::print_status() const
     {
 	switch (this->status) {
 	    case BOOTSTRAP:
-		cout << "[DiSR on "<<router->local_id<<"] current status:  BOOTSTRAP" << endl;
+		cout << "[DiSR on "<<router->local_id<<"] status:  BOOTSTRAP" << endl;
 		break;
 	    case READY_SEARCHING:
-		cout << "[DiSR on "<<router->local_id<<"] current status:  READY_SEARCHING" << endl;
+		cout << "[DiSR on "<<router->local_id<<"] status:  READY_SEARCHING" << endl;
 		break;
 	    case ACTIVE_SEARCHING:
-		cout << "[DiSR on "<<router->local_id<<"] current status:  ACTIVE_SEARCHING" << endl;
+		cout << "[DiSR on "<<router->local_id<<"] status:  ACTIVE_SEARCHING" << endl;
 		break;
 	    case CANDIDATE:
-		cout << "[DiSR on "<<router->local_id<<"] current status:  CANDIDATE" << endl;
+		cout << "[DiSR on "<<router->local_id<<"] status:  CANDIDATE" << endl;
 		break;
 	    case ASSIGNED:
-		cout << "[DiSR on "<<router->local_id<<"] current status:  ASSIGNED" << endl;
+		cout << "[DiSR on "<<router->local_id<<"] status:  ASSIGNED" << endl;
 		break;
 	    case FREE:
-		cout << "[DiSR on "<<router->local_id<<"] current status:  FREE" << endl;
+		// assuming mute as free
+		// cout << "[DiSR on "<<router->local_id<<"] status:  FREE" << endl;
 		break;
 	    default:
-		cout << "[DiSR on "<<router->local_id<<"] current status:  NOTVALID!!" << endl;
+		cout << "[DiSR on "<<router->local_id<<"] status:  NOTVALID!!" << endl;
 		exit(0);
 	}
     }
@@ -139,7 +161,8 @@ void DiSR::update_status()
 
     if (status == BOOTSTRAP)
     { 
-	status = READY_SEARCHING;
+	// go directly to ACTIVE
+	//status = READY_SEARCHING;
 	cout << "[DiSR on "<<router->local_id<<"] starting node setup, ready to inject STARTING_SEGMENT_REQUEST" << endl;
 	//must search for starting segment
 	search_starting_segment();
@@ -154,21 +177,25 @@ void DiSR::update_status()
 
 void DiSR::reset()
 {
-    const TSegmentId segnull = TSegmentId(NOT_VALID,NOT_VALID);
-    visited= segnull;
-    tvisited= segnull;
-    segment = segnull;
+    const TSegmentId freeid = TSegmentId(NOT_RESERVED,NOT_RESERVED);
+    visited= false;
+    tvisited= false;
+    segID = freeid;
+    starting = false;
+    terminal = false;
+    subnet = NOT_RESERVED;
+    current_link = DIRECTION_NORTH;
 
     for (int i =0;i<DIRECTIONS;i++)
     {
-	link_visited[i] = segnull;
-	link_tvisited[i] = segnull;
+	// note: not valid links shouldnt' be set as free
+	if (link_visited[i].isValid())
+	{
+	    link_visited[i] = freeid;
+	    link_tvisited[i] = freeid;
+	}
     }
 
-    starting = false;
-    terminal = false;
-    subnet = NOT_VALID;
-    current_link = DIRECTION_NORTH;
     // To test the model, the node 0 is always used for bootstrapping 
     // the whole algorithm
     // Whener the router pointer is updated, status must be resetted
@@ -176,6 +203,13 @@ void DiSR::reset()
 	status = BOOTSTRAP;
     else
 	status = FREE;
+}
+
+void DiSR::invalidate(int d)
+{
+    link_visited[d] = TSegmentId(NOT_VALID,NOT_VALID);
+    link_tvisited[d] = TSegmentId(NOT_VALID,NOT_VALID);
+
 }
 
 bool DiSR::sanity_check()
