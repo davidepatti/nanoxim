@@ -90,11 +90,17 @@ void TNet::buildMesh()
     {
       t[i][0]->r->reservation_table.invalidate(DIRECTION_NORTH);
       t[i][TGlobalParams::mesh_dim_y-1]->r->reservation_table.invalidate(DIRECTION_SOUTH);
+
+      t[i][0]->r->disr.invalidate(DIRECTION_NORTH);
+      t[i][TGlobalParams::mesh_dim_y-1]->r->disr.invalidate(DIRECTION_SOUTH);
     }
   for(int j=0; j<TGlobalParams::mesh_dim_y; j++)
     {
       t[0][j]->r->reservation_table.invalidate(DIRECTION_WEST);
       t[TGlobalParams::mesh_dim_x-1][j]->r->reservation_table.invalidate(DIRECTION_EAST);
+
+      t[0][j]->r->disr.invalidate(DIRECTION_WEST);
+      t[TGlobalParams::mesh_dim_x-1][j]->r->disr.invalidate(DIRECTION_EAST);
     }
 
 }
