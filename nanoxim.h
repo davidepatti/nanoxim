@@ -10,14 +10,17 @@
 using namespace std;
 
 
-// Define the directions as numbers
 #define DIRECTIONS             4
+
+// Define the directions as numbers
 #define DIRECTION_NORTH        0
 #define DIRECTION_EAST         1
 #define DIRECTION_SOUTH        2
 #define DIRECTION_WEST         3
 #define DIRECTION_LOCAL        4
-#define DIRECTION_ALL	       99
+
+// all available out direction, different behaviour
+#define FLOOD_MODE    99
 
 // Generic not reserved resource
 #define NOT_RESERVED          -2
@@ -128,7 +131,7 @@ enum TPacketType
 //---------------------------------------------------------------------------
 // Distribuited SR data
 
-enum DiSR_status { BOOTSTRAP,READY_SEARCHING, ACTIVE_SEARCHING, CANDIDATE, ASSIGNED, FREE };
+enum DiSR_status { BOOTSTRAP, READY_SEARCHING, ACTIVE_SEARCHING, CANDIDATE, ASSIGNED, FREE };
 
 class TSegmentId
 {
@@ -176,7 +179,6 @@ class DiSR
     private:
   int next_free_link();
   bool sanity_check();
-  void search_starting_segment();
   void print_status() const;
 
   // Local environment data (LED)

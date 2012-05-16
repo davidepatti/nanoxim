@@ -37,6 +37,7 @@ void TRouter::rxProcess()
 	    // 1) there is an incoming request
 	    // 2) there is a free slot in the input buffer of direction i
 
+	    ///////////////
 	    if ( (req_rx[i].read()==1-current_level_rx[i]) && !buffer[i].IsFull() )
 	    {
 		cout << "[ROUTER " << local_id <<"] rxProcess can receive from dir " << i << " with non-empty buffer" << endl;
@@ -75,10 +76,16 @@ void TRouter::txProcess()
     }
   else
     {
+	// The output of the process function
+      // note: since the process function can also involve control packets (e.g. DiSR) its output can be either a direction to be reserved
+      // or an action to be taken (e.g. flooding)
+	int process_out;
+
       // 1st phase: Reservation
       for(int j=0; j<DIRECTIONS+1; j++)
 	{
 	  int i = (start_from_port + j) % (DIRECTIONS + 1);
+
 
 	  if ( !buffer[i].IsEmpty() )
 	    {
@@ -86,18 +93,24 @@ void TRouter::txProcess()
 	      TPacket packet = buffer[i].Front();
 	      packet.dir_in = i;
 
-	      int o = process(packet);
+	      process_out = process(packet);
 
 	      // broadcast required
-	      if (o == DIRECTION_ALL)
+	      if (process_out == FLOOD_MODE)
 	      {
-		    cout << "[ROUTER " << local_id << "]:txProcess broadcasting packet with id " << packet.src_id << endl; 
-		    for (int d=0;d<DIRECTIONS+1;d++)
+		  vector<int> directions;
+
+		    cout << "[ROUTER " << local_id << "]:txProcess flooding packet from in " << i << " with id " << packet.id << endl; 
+		    // note: broadcast should not send to the following directions:
+		    // - DIRECTION_LOCAL (that is 4)
+		    // - the direction which the packet came from (that is i)
+		    for (int d=0;d<DIRECTIONS;d++)
 		    {
-			  if (reservation_table.isAvailable(d))
+			  if ( (d!=i) && (reservation_table.isAvailable(d)) )
 			  {
-			      cout << "[ROUTER " << local_id << "]:txProcess (broadcasting) reservation_table available with i="<<i<<",o="<<d<<endl;
-			      reservation_table.reserve(i, d);
+			      cout << "[ROUTER " << local_id << "]:txProcess (flooding) adding reservation  i="<<i<<",o="<<d<<endl;
+			      directions.push_back(d);
+
 			      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
 			      {
 				  cout << sc_time_stamp().to_double()/1000 
@@ -106,22 +119,24 @@ void TRouter::txProcess()
 				      << ", reserved Output[" << d << "], packet: " << packet << endl;
 			      }		      
 			  }
-
 		  }
+		  reservation_table.reserve(i, directions);
 
 	      }
-	      else
+	      else  // not flooding mode, just reserve a direction
 
-	      if (reservation_table.isAvailable(o))
+	      if (reservation_table.isAvailable(process_out))
 		{
-		    cout << "[ROUTER " << local_id << "]:txProcess reservation_table available with i="<<i<<",o="<<o<<endl;
-		  reservation_table.reserve(i, o);
+
+		  cout << "[ROUTER " << local_id << "]:txProcess adding reservation i="<<i<<",o="<<process_out<<endl;
+		  reservation_table.reserve(i, process_out);
+
 		  if(TGlobalParams::verbose_mode > VERBOSE_OFF)
 		    {
 		      cout << sc_time_stamp().to_double()/1000 
 			   << ": Router[" << local_id 
 			   << "], Input[" << i << "] (" << buffer[i].Size() << " packets)" 
-			   << ", reserved Output[" << o << "], packet: " << packet << endl;
+			   << ", reserved Output[" << process_out << "], packet: " << packet << endl;
 		    }		      
 		}
 	    }
@@ -133,31 +148,102 @@ void TRouter::txProcess()
 	{
 	  if ( !buffer[i].IsEmpty() )
 	    {
+
 	      TPacket packet = buffer[i].Front();
+	      // TODO: better way to implement this, e.g. single
+	      // getOutputPort function returning a vector in both
+	      // cases
 
-	      int o = reservation_table.getOutputPort(i);
-	      if (o != NOT_RESERVED)
-		{
-		  if ( current_level_tx[o] == ack_tx[o].read() )
+	      if (process_out==FLOOD_MODE)
+	      {
+		  vector<int> directions = reservation_table.getMultiOutputPort(i);
+
+		  // Note that even with FLOOD_MODE set  directions could be an empty or single value vector, if no other channels were available at the moment 
+		  // Anyway, during flooding phase the packet should be removed from buffer, since the reserved output destinations mean
+		  // that those outputs have been flooded
+		 
+		  if (directions.size()>0)
+		  {
+		      // DEBUG
+		      cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to MULT-DIR ";
+		      for (unsigned int j=0;j<directions.size();j++)
+		      {
+			  cout << directions[j] << ",";
+		      }
+		      cout << endl;
+
+		      for (unsigned int j=0;j<directions.size();j++)
+		      {
+			  int o = directions[j]; // current out dir
+
+			  if ( current_level_tx[o]== ack_tx[o].read() )
+			    {
+			      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
+				{
+				  cout << sc_time_stamp().to_double()/1000 
+				       << ": Router[" << local_id 
+				       << "], Input[" << i << "] forward to Output[" << o << "], packet: " << packet << endl;
+				}
+
+			      packet_tx[o].write(packet);
+			      current_level_tx[o] = 1 - current_level_tx[o];
+			      req_tx[o].write(current_level_tx[o]);
+
+			      // DEBUG
+			      cout << "****DEBUG***** " << " ROUTER " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
+
+			      // TODO: always release ?
+			    reservation_table.release(o);
+				
+			      // Update stats
+			    }
+		      }
+
+		  }
+		  buffer[i].Pop();
+
+	      /// multiple dest
+
+	      }
+	      else
+	      {
+	      /// single dest ////////////////////////////////
+		  int o = reservation_table.getOutputPort(i);
+		  // DEBUG
+		  if (o != NOT_RESERVED)
 		    {
-                      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
+		      cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to DIR " << o << endl;
+
+		      if ( current_level_tx[o] == ack_tx[o].read() )
 			{
-			  cout << sc_time_stamp().to_double()/1000 
-			       << ": Router[" << local_id 
-			       << "], Input[" << i << "] forward to Output[" << o << "], packet: " << packet << endl;
+			  if(TGlobalParams::verbose_mode > VERBOSE_OFF)
+			    {
+			      cout << sc_time_stamp().to_double()/1000 
+				   << ": Router[" << local_id 
+				   << "], Input[" << i << "] forward to Output[" << o << "], packet: " << packet << endl;
+			    }
+
+			  packet_tx[o].write(packet);
+			  current_level_tx[o] = 1 - current_level_tx[o];
+			  req_tx[o].write(current_level_tx[o]);
+			  buffer[i].Pop();
+
+			  // DEBUG
+			  cout << "****DEBUG***** " << " ROUTER " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
+
+			  // TODO: always release ?
+			reservation_table.release(o);
+			    
+			  // Update stats
 			}
-
-		      packet_tx[o].write(packet);
-		      current_level_tx[o] = 1 - current_level_tx[o];
-		      req_tx[o].write(current_level_tx[o]);
-		      buffer[i].Pop();
-
-		      // TODO: always release ?
-		    reservation_table.release(o);
-			
-		      // Update stats
 		    }
-		}
+		  else
+		  {
+		      cout << "****DEBUG***** " << " ROUTER " << local_id << " CRITICAL: no reservation for input  " << i << endl;
+		  }
+
+		  ///////////////////////////////////////////////
+	      }
 	    }
 	}
     } // else

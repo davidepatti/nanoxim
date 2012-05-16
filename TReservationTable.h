@@ -29,12 +29,16 @@ class TReservationTable
   // Connects port_in with port_out. Asserts if port_out is reserved
   void reserve(const int port_in, const int port_out);
 
+  // Connects port_in with port_out. Asserts if port_out is reserved
+  void reserve(const int port_in, const vector<int>&);
+
   // Releases port_out connection. 
   // Asserts if port_out is not reserved or not valid
   void release(const int port_out);
 
   // Returns the output port connected to port_in.
   int getOutputPort(const int port_in) const;
+  vector<int> getMultiOutputPort(const int port_in) const;
 
   // Makes output port no longer available for reservation/release
   void invalidate(const int port_out);
