@@ -36,17 +36,20 @@ void DiSR::set_router(TRouter * r)
 int DiSR::process(const TPacket& p)
 {
     // TODO: check all cases
-    cout << "[DiSR on node "<<router->local_id<<"]: CALL process" << endl;
 
     if (p.type == STARTING_SEGMENT_REQUEST )
     {
 	TSegmentId pippo = p.id;
-	cout << "[DiSR on node "<<router->local_id << "]: processing STARTING SEG REQUEST with ID " << pippo << endl;
+	cout << "[DiSR on "<<router->local_id << "]: processing STARTING SEG REQUEST with ID " << pippo << endl;
 
 	// foreign starting segment request, flooding ...
 	if ( p.src_id!=router->local_id )
 	{
-	    return DIRECTION_ALL;
+	    cout << "[DiSR on "<<router->local_id << "]: enable flooding..." << endl;
+	    // TODO: ignore flooding if packet already received....
+	    this->status = CANDIDATE;
+	    return FLOOD_MODE;
+	    
 	}
 	else // processing a locally generated starting segment packet, 
 	     // inject to the link found by next_free_link()
@@ -57,6 +60,7 @@ int DiSR::process(const TPacket& p)
 	else // the packet returned to its orginal source, confirm segment!
 	if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
+	    this->status =  ASSIGNED;
 	    //cout << "[DiSR on node "<<router->local_id<<"]: confirming  STARTING SEG REQUEST " << p.id << endl;
 	    return DIRECTION_LOCAL; // TODO: check how packets are sinked
 	}
@@ -83,38 +87,6 @@ int DiSR::next_free_link()
     return NOT_VALID;
 }
 
-void DiSR::search_starting_segment()
-{
-	visited = true;
-	int candidate_link = next_free_link();
-
-	if (candidate_link!=NOT_VALID)
-	{
-	    cout << "[DiSR on "<<router->local_id<<"] free link " << candidate_link << endl;
-	    status = ACTIVE_SEARCHING;
-	    TSegmentId segment_id(router->local_id,candidate_link);
-	    // mark the link and the node with id of segment request
-	    link_tvisited[candidate_link] = segment_id;
-
-
-	    // prepare the packet
-	    TPacket packet;
-	    packet.id = segment_id;
-	    packet.src_id = router->local_id;
-	    packet.type = STARTING_SEGMENT_REQUEST;
-	    packet.dir_in = DIRECTION_LOCAL;
-	    packet.dir_out = candidate_link;
-	    packet.hop_no = 0;
-
-	    cout << "[DiSR on "<<router->local_id<<"] injecting STARTING_SEGMENT_REQUEST " << segment_id << " towards direction " << candidate_link << endl;
-	    router->inject_to_network(packet);
-	}
-	else
-	{
-	    cout << "[DiSR on "<<router->local_id<<"]: CRITICAL! cant inject STARTING_SEGMENT_REQUEST (no suitable links)" << endl;
-	}
-
-}
 
 void DiSR::print_status() const
 {
@@ -156,16 +128,44 @@ void DiSR::print_status() const
 
 void DiSR::update_status()
 {
-    cout << "[DiSR on "<<router->local_id<<"] updating DiSR status..." << endl;
-    print_status();
 
     if (status == BOOTSTRAP)
     { 
-	// go directly to ACTIVE
-	//status = READY_SEARCHING;
-	cout << "[DiSR on "<<router->local_id<<"] starting node setup, ready to inject STARTING_SEGMENT_REQUEST" << endl;
+	// go directly to ACTIVE status 
+	cout << "[DiSR on "<<router->local_id<<"] starting node BOOTSTRAP, ready to inject STARTING_SEGMENT_REQUEST" << endl;
+	
+	/////////////////////////////////////////////////////////////////////////////////
 	//must search for starting segment
-	search_starting_segment();
+
+	visited = true;
+	int candidate_link = next_free_link();
+
+	if (candidate_link!=NOT_VALID)
+	{
+	    cout << "[DiSR on "<<router->local_id<<"] free link " << candidate_link << endl;
+	    TSegmentId segment_id(router->local_id,candidate_link);
+	    // mark the link and the node with id of segment request
+	    link_tvisited[candidate_link] = segment_id;
+
+
+	    // prepare the packet
+	    TPacket packet;
+	    packet.id = segment_id;
+	    packet.src_id = router->local_id;
+	    packet.type = STARTING_SEGMENT_REQUEST;
+	    packet.dir_in = DIRECTION_LOCAL;
+	    packet.dir_out = candidate_link;
+	    packet.hop_no = 0;
+
+	    cout << "[DiSR on "<<router->local_id<<"] injecting STARTING_SEGMENT_REQUEST " << segment_id << " towards direction " << candidate_link << endl;
+	    router->inject_to_network(packet);
+	    status = ACTIVE_SEARCHING;
+	}
+	else
+	{
+	    cout << "[DiSR on "<<router->local_id<<"]: CRITICAL! cant inject STARTING_SEGMENT_REQUEST (no suitable links)" << endl;
+	}
+	///////////////////// end injecting starting segment //////
     }
 
     if (status == ACTIVE_SEARCHING)
