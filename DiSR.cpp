@@ -63,9 +63,7 @@ DiSR_status DiSR::getStatus() const
 	    assert(visited==false);
 	    break;
 	default:
-	    cout << "[DiSR on "<<router->local_id<<"] status:  NOTVALID!!" << endl;
-	    assert(false);
-	    exit(-1);
+	    cout << "[DiSR on "<<router->local_id<<"]: WARNING not valid status " << this->status << endl;
     }
 
     return (this->status);
@@ -74,13 +72,17 @@ DiSR_status DiSR::getStatus() const
 
 void DiSR::setStatus(const DiSR_status& new_status)
 {
-    DiSR_status current_status = getStatus();
+    DiSR_status current_status = this->status;
 
-    assert(new_status!=current_status);
+    //assert(new_status!=current_status);
+    
+    if (new_status==current_status)
+	    cout << "[DiSR on "<<router->local_id<<"] WARNING: setting already present status "<< current_status << endl;
 
-    switch (current_status) {
+
+    switch (new_status) {
 	case BOOTSTRAP:
-	    assert(new_status==ACTIVE_SEARCHING);
+	    //assert(new_status==ACTIVE_SEARCHING);
 	    break;
 	case READY_SEARCHING:
 	    break;
@@ -93,7 +95,7 @@ void DiSR::setStatus(const DiSR_status& new_status)
 	case FREE:
 	    break;
 	default:
-	    cout << "[DiSR on "<<router->local_id<<"] status:  NOTVALID!!" << endl;
+	    cout << "[DiSR on "<<router->local_id<<"] CRITICAL: setting not valid status " << new_status << endl;
 	    assert(false);
 	    exit(-1);
     }
@@ -132,13 +134,14 @@ void DiSR::setLinks(int type, const vector<int>& directions,const TSegmentId& id
 int DiSR::process(TPacket& p)
 {
     const TSegmentId freeid = TSegmentId(NOT_RESERVED,NOT_RESERVED);
+    const TSegmentId packet_segment_id = p.id;
+    const TSegmentId local_segment_id = this->segID;
 
     ////////////////////////////////////////////////////////
     if (p.type == STARTING_SEGMENT_REQUEST )
     ////////////////////////////////////////////////////////
     {
-	TSegmentId pippo = p.id;
-	cout << "[DiSR on "<<router->local_id << "]: processing STARTING SEG REQUEST with ID " << pippo << endl;
+	cout << "[DiSR on "<<router->local_id << "]: processing STARTING SEG REQUEST with ID " << packet_segment_id << endl;
 
 	 // locally generated 
 	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
@@ -153,9 +156,9 @@ int DiSR::process(TPacket& p)
 	    {
 		cout << "[DiSR on "<<router->local_id << "]: enable flooding..." << endl;
 
-		this->segID = p.id;
+		this->segID = packet_segment_id;
 		tvisited = true;
-		link_tvisited[p.dir_in] = p.id;
+		link_tvisited[p.dir_in] = packet_segment_id;
 
 
 		setStatus(CANDIDATE);
@@ -177,11 +180,11 @@ int DiSR::process(TPacket& p)
 	// visited, there's no need to move from tvisited to visited
 	else if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
-	    this->segID = p.id;
-	    cout << "[DiSR on node "<<router->local_id<<"]: CONFIRM STARTING SEG REQUEST " << this->segID << endl;
+	    this->segID = packet_segment_id;
+	    cout << "[DiSR on node "<<router->local_id<<"]: CONFIRM STARTING SEG REQUEST " << packet_segment_id << endl;
 	    setStatus(ASSIGNED);
 	    confirm_starting_segment(p);
-	    return CONFIRM; // TODO: perform confirmation stuff 
+	    return CONFIRM; 
 	}
     }
 
@@ -189,8 +192,8 @@ int DiSR::process(TPacket& p)
     if (p.type == SEGMENT_CONFIRM)
     ////////////////////////////////////////////////////////
     {
-	TSegmentId segment_id = p.id;
-	cout << "[DiSR on "<<router->local_id << "]: processing SEGMENT_CONFIRM with ID " << segment_id << endl;
+
+	cout << "[DiSR on "<<router->local_id << "]: processing SEGMENT_CONFIRM with ID " << packet_segment_id << endl;
 
 	 // locally generated starting segment packet confirmation, 
 	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
@@ -204,24 +207,26 @@ int DiSR::process(TPacket& p)
 	if (  p.src_id!=router->local_id ) 
 	{
 
-	    if  ( (this->getStatus()==CANDIDATE) && (this->segID == p.id) ) 
+	    if  ( (this->getStatus()==CANDIDATE) && (local_segment_id == packet_segment_id) )
 	    {
-		cout << "[DiSR on "<< router->local_id <<  "]: CANDIDATE to segment id: " << segment_id << " has been ASSIGNED!" << endl;
+		cout << "[DiSR on "<< router->local_id <<  "]: CANDIDATE to segment id: " << local_segment_id << " has been ASSIGNED!" << endl;
 		this->tvisited = false;
 		this->visited = true;
-		this->link_visited[p.dir_in] = p.id;
+		this->link_visited[p.dir_in] = packet_segment_id;
 		this->link_tvisited[p.dir_in] = freeid;
 
 		this->setStatus(ASSIGNED);
-		cout << "[DiSR on "<< router->local_id <<  "]: FORWARDING CONFIRM " << segment_id << " back to " << flooding_path << endl;
+		cout << "[DiSR on "<< router->local_id <<  "]: FORWARDING CONFIRM " << packet_segment_id << " back to " << flooding_path << endl;
 		return flooding_path;
 		
 		// return FORWARD_CONFIRM;
 	    }
 	    else 
 	    {
+		cout << "[DiSR on "<<router->local_id << "]: CRITICAL, receving SEGMENT_CONFIRM with inconsistent environment:" << endl;
+		cout << "[DiSR on "<<router->local_id << "]: local segid = " << local_segment_id << " , packet id = " << packet_segment_id << ", ";
+		print_status();
 		assert(false);
-		cout << "[DiSR on "<<router->local_id << "]: CRITICAL, receving SEGMENT_CONFIRM with inconsistent environment" << endl;
 		return IGNORE;
 	    }
 	    
@@ -230,7 +235,7 @@ int DiSR::process(TPacket& p)
 	else // the confirmation packet returned to its orginal source, alla done!
 	if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
-	    cout << "[DiSR on node "<<router->local_id<<"]: confirmation process of segment id " << this->segID <<  " ENDED !" << endl;
+	    cout << "[DiSR on node "<<router->local_id<<"]: confirmation process of segment id " << packet_segment_id <<  " ENDED !" << endl;
 	    setStatus(ASSIGNED);
 	    return END_CONFIRM; 
 	}

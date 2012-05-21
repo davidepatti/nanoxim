@@ -64,6 +64,14 @@ using namespace std;
 // TODO by Fafa - this MUST be removed!!!
 #define MAX_STATIC_DIM 20
 
+enum DiSR_status { BOOTSTRAP, 
+                   READY_SEARCHING, 
+		   ACTIVE_SEARCHING, 
+		   CANDIDATE, 
+		   ASSIGNED, 
+		   FREE 
+};
+
 //---------------------------------------------------------------------------
 // TGlobalParams -- used to forward configuration to every sub-block
 struct TGlobalParams
@@ -158,12 +166,12 @@ class TSegmentId
 	    return ( (segid.node==node) && (segid.link==link));
 	}
 
-	inline bool isFree()
+	inline bool isFree() const
 	{
 	    return ( (node == NOT_RESERVED) && (link == NOT_RESERVED));
 
 	}
-	inline bool isValid()
+	inline bool isValid() const
 	{
 	    return ( (node != NOT_VALID) && (link != NOT_VALID));
 
@@ -174,7 +182,6 @@ class TSegmentId
 class TPacket;
 class TRouter;
 
-enum DiSR_status { BOOTSTRAP, READY_SEARCHING, ACTIVE_SEARCHING, CANDIDATE, ASSIGNED, FREE };
 
 class DiSR
 {
@@ -281,7 +288,7 @@ inline ostream& operator << (ostream& os, const TCoord& coord)
   return os;
 }
 
-inline ostream& operator << (ostream& os, TSegmentId& segid)
+inline ostream& operator << (ostream& os, const TSegmentId& segid)
 {
     if (segid.isFree())
 	os << "(.)";
