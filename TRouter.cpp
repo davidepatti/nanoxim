@@ -133,6 +133,7 @@ void TRouter::txProcess()
 	      {
 		  //TODO: take some action in reservation phase ?
 	      }
+	      /*
 	      else  if (process_out==FORWARD_CONFIRM)
 	      {
 		  cout << "[ROUTER " << local_id << "]:txProcess FORWARD_CONFIRM, adding reservation i="<<i<<",o="<<disr.flooding_path<<endl;
@@ -141,6 +142,7 @@ void TRouter::txProcess()
 		      else
 		      cout << "[ROUTER " << local_id << "]:txProcess FORWARD_CONFIRM, CRITICAL: flooding path "<<disr.flooding_path<< " not available!" << endl;
 	      }
+	      */
 	      else  if (process_out==END_CONFIRM)
 	      {
 	      }
@@ -184,7 +186,7 @@ void TRouter::txProcess()
 		  if (directions.size()>0)
 		  {
 		      // DEBUG
-		      cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to MULT-DIR ";
+		      //cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to MULT-DIR ";
 		      for (unsigned int j=0;j<directions.size();j++)
 		      {
 			  cout << directions[j] << ",";
@@ -209,7 +211,7 @@ void TRouter::txProcess()
 			      req_tx[o].write(current_level_tx[o]);
 
 			      // DEBUG
-			      cout << "****DEBUG***** " << " ROUTER " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
+			      //cout << "****DEBUG***** " << " ROUTER " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
 
 			      // TODO: always release ?
 			    reservation_table.release(o);
@@ -239,6 +241,22 @@ void TRouter::txProcess()
 		      cout << "****DEBUG***** " << " ROUTER " << local_id << " CRITICAL: no reservation for input  " << i << endl;
 		  }
 	      }*/
+	      else  if (process_out==CONFIRM)
+	      {
+		  // - The received packet will issue a confirmation phase
+		  // starting from the current router
+		  // - An appropriate confirmation packet has been generated and put
+		  // to the local  buffer by the DiSR::process()
+		  // - Must remove the received packet from the input
+		  // buffer 
+		  // - Must also cancel the state of process_out to
+		  // avoid the scanning of direction to continue in
+		  // this cycle
+
+		  cout << "****DEBUG***** " << " ROUTER " << local_id << " thrashing confirmed request from dir " << i << endl;
+		  process_out = NOT_VALID;
+		  buffer[i].Pop();
+	      }
 	      else if (process_out == END_CONFIRM)
 	      {
 		  // just trash the packet 
@@ -248,10 +266,10 @@ void TRouter::txProcess()
 	      else if (process_out>=0 && process_out<=4) 
 	      {
 		  int o = reservation_table.getOutputPort(i);
+		  cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to DIR " << o << endl;
 		  // DEBUG
 		  if (o != NOT_RESERVED)
 		    {
-		      //cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to DIR " << o << endl;
 
 		      if ( current_level_tx[o] == ack_tx[o].read() )
 			{
@@ -268,7 +286,7 @@ void TRouter::txProcess()
 			  buffer[i].Pop();
 
 			  // DEBUG
-			  //cout << "****DEBUG***** " << " ROUTER " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
+			  cout << "****DEBUG***** " << " ROUTER " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
 
 			  // TODO: always release ?
 			reservation_table.release(o);
