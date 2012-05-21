@@ -28,8 +28,11 @@ void TReservationTable::clear()
 
 bool TReservationTable::isAvailable(const int port_out) const
 {
-  assert(port_out >= 0 && port_out < DIRECTIONS+1);
+  //assert(port_out >= 0 && port_out < DIRECTIONS+1);
 
+    if (! (port_out >= 0 &&  port_out < DIRECTIONS+1))
+	cout << " ASSERTION FAILED with port_out " << port_out << endl;
+    
   return ((rtable[port_out] == NOT_RESERVED));
 }
 
