@@ -23,7 +23,7 @@ using namespace std;
 // flood all available out directions, ignore packet, confirm requests
 #define FLOOD_MODE    100
 #define IGNORE	101
-#define FORWARD_CONFIRM 102 // check if necessary
+//#define FORWARD_CONFIRM 102 // check if necessary
 #define END_CONFIRM 103
 #define CONFIRM 104
 
