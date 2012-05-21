@@ -19,8 +19,13 @@ using namespace std;
 #define DIRECTION_WEST         3
 #define DIRECTION_LOCAL        4
 
-// all available out direction, different behaviour
-#define FLOOD_MODE    99
+// ACTIONS
+// flood all available out directions, ignore packet, confirm requests
+#define FLOOD_MODE    100
+#define IGNORE	101
+#define FORWARD_CONFIRM 102 // check if necessary
+#define END_CONFIRM 103
+#define CONFIRM 104
 
 // Generic not reserved resource
 #define NOT_RESERVED          -2
@@ -30,6 +35,12 @@ using namespace std;
 
 // Routing algorithms
 #define ROUTING_XY             0
+
+// type of link to be set
+#define VISITED 1
+#define TVISITED 2
+#define ALL 3
+
 
 
 // Verbosity levels
@@ -131,7 +142,6 @@ enum TPacketType
 //---------------------------------------------------------------------------
 // Distribuited SR data
 
-enum DiSR_status { BOOTSTRAP, READY_SEARCHING, ACTIVE_SEARCHING, CANDIDATE, ASSIGNED, FREE };
 
 class TSegmentId
 {
@@ -164,6 +174,8 @@ class TSegmentId
 class TPacket;
 class TRouter;
 
+enum DiSR_status { BOOTSTRAP, READY_SEARCHING, ACTIVE_SEARCHING, CANDIDATE, ASSIGNED, FREE };
+
 class DiSR
 {
 
@@ -171,15 +183,22 @@ class DiSR
     public:
   void reset();
   void update_status();
-  int process(const TPacket& p);
+  int process(TPacket& p);
   void set_router(TRouter *);
   void invalidate(int);
+  DiSR_status getStatus() const;
+  void setLinks(int type, const vector<int>& directions,const TSegmentId& id);
+  unsigned int flooding_path; // the direction from which a flooding request came
 
 
     private:
   int next_free_link();
   bool sanity_check();
   void print_status() const;
+  void bootstrap_node();
+  void setStatus(const DiSR_status&);
+  void confirm_starting_segment(TPacket&);
+
 
   // Local environment data (LED)
 

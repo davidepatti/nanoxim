@@ -66,7 +66,7 @@ SC_MODULE(TRouter)
 
  private:
   // performs actual routing + selection
-  int process(const TPacket& p);
+  int process(TPacket& p);
   vector<int> routingFunction(const TPacket& p);
 
 

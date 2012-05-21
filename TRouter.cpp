@@ -21,9 +21,10 @@ void TRouter::rxProcess()
     }
     else
     {
-	// NB:when performing DiSR setup, new packets are buffered in
-	// local PE buffer
-	//
+	// Perform all disr stuff update not striclty related to the
+	// event of actually receiving a new packet. For example:
+	// - bootstrapping node for first segment request
+	// - TODO: updating timeouts
 	if (TGlobalParams::disr) disr.update_status();
 	//
 	// For each channel decide if a new packet can be accepted
@@ -95,7 +96,7 @@ void TRouter::txProcess()
 
 	      process_out = process(packet);
 
-	      // broadcast required
+	      // broadcast required //////////////////////////
 	      if (process_out == FLOOD_MODE)
 	      {
 		  vector<int> directions;
@@ -121,11 +122,31 @@ void TRouter::txProcess()
 			  }
 		  }
 		  reservation_table.reserve(i, directions);
+		  
+		  // TODO: Update DiSR LED - here or in actual
+		  // forwading ???
+		  this->disr.setLinks(TVISITED,directions,packet.id);
+		  this->disr.flooding_path = packet.dir_in;
 
 	      }
-	      else  // not flooding mode, just reserve a direction
+	      else if (process_out==IGNORE)
+	      {
+		  //TODO: take some action in reservation phase ?
+	      }
+	      else  if (process_out==FORWARD_CONFIRM)
+	      {
+		  cout << "[ROUTER " << local_id << "]:txProcess FORWARD_CONFIRM, adding reservation i="<<i<<",o="<<disr.flooding_path<<endl;
+                  if (reservation_table.isAvailable(this->disr.flooding_path))
+		      reservation_table.reserve(i, this->disr.flooding_path);
+		      else
+		      cout << "[ROUTER " << local_id << "]:txProcess FORWARD_CONFIRM, CRITICAL: flooding path "<<disr.flooding_path<< " not available!" << endl;
+	      }
+	      else  if (process_out==END_CONFIRM)
+	      {
+	      }
 
-	      if (reservation_table.isAvailable(process_out))
+		// not control mode, just reserve a direction
+	      else if ( (process_out>=0 && process_out<=4) && (reservation_table.isAvailable(process_out) ) )
 		{
 
 		  cout << "[ROUTER " << local_id << "]:txProcess adding reservation i="<<i<<",o="<<process_out<<endl;
@@ -150,10 +171,8 @@ void TRouter::txProcess()
 	    {
 
 	      TPacket packet = buffer[i].Front();
-	      // TODO: better way to implement this, e.g. single
-	      // getOutputPort function returning a vector in both
-	      // cases
 
+	      ////////////////////////////////////////////////////////////
 	      if (process_out==FLOOD_MODE)
 	      {
 		  vector<int> directions = reservation_table.getMultiOutputPort(i);
@@ -194,25 +213,45 @@ void TRouter::txProcess()
 
 			      // TODO: always release ?
 			    reservation_table.release(o);
-				
-			      // Update stats
+
 			    }
 		      }
 
 		  }
 		  buffer[i].Pop();
 
-	      /// multiple dest
-
 	      }
-	      else
+	      else if (process_out == IGNORE)
 	      {
+		  // just trash the packet 
+		  buffer[i].Pop();
+	      }
+	      /*
+	      else  if (process_out==FORWARD_CONFIRM)// USELESS ??!?!?
+	      {
+		  int o = reservation_table.getOutputPort(i);
+		  // DEBUG
+		  if (o != NOT_RESERVED)
+		  {
+		  }
+		  else
+		  {
+		      cout << "****DEBUG***** " << " ROUTER " << local_id << " CRITICAL: no reservation for input  " << i << endl;
+		  }
+	      }*/
+	      else if (process_out == END_CONFIRM)
+	      {
+		  // just trash the packet 
+		  buffer[i].Pop();
+	      }
 	      /// single dest ////////////////////////////////
+	      else if (process_out>=0 && process_out<=4) 
+	      {
 		  int o = reservation_table.getOutputPort(i);
 		  // DEBUG
 		  if (o != NOT_RESERVED)
 		    {
-		      cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to DIR " << o << endl;
+		      //cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to DIR " << o << endl;
 
 		      if ( current_level_tx[o] == ack_tx[o].read() )
 			{
@@ -229,7 +268,7 @@ void TRouter::txProcess()
 			  buffer[i].Pop();
 
 			  // DEBUG
-			  cout << "****DEBUG***** " << " ROUTER " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
+			  //cout << "****DEBUG***** " << " ROUTER " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
 
 			  // TODO: always release ?
 			reservation_table.release(o);
@@ -273,7 +312,7 @@ vector<int> TRouter::routingFunction(const TPacket& p)
 
 //---------------------------------------------------------------------------
 
-int TRouter::process(const TPacket& p)
+int TRouter::process(TPacket& p)
 {
 
     // DiSR setup traffic management
