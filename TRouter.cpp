@@ -38,10 +38,9 @@ void TRouter::rxProcess()
 	    // 1) there is an incoming request
 	    // 2) there is a free slot in the input buffer of direction i
 
-	    ///////////////
 	    if ( (req_rx[i].read()==1-current_level_rx[i]) && !buffer[i].IsFull() )
 	    {
-		cout << "[ROUTER " << local_id <<"] rxProcess can receive from dir " << i << " with non-empty buffer" << endl;
+		cout << "[node " << local_id <<"] rxProcess() can receive from dir " << i << " with non-empty buffer" << endl;
 		TPacket received_packet = packet_rx[i].read();
 
 		if(TGlobalParams::verbose_mode > VERBOSE_OFF)
@@ -71,9 +70,9 @@ void TRouter::txProcess()
 	{
 	  req_tx[i].write(0);
 	  current_level_tx[i] = 0;
-	  // DiSR
-	  if (TGlobalParams::disr) this->disr.reset();
 	}
+	// DiSR
+      if (TGlobalParams::disr) this->disr.reset();
     }
   else
     {
@@ -90,7 +89,7 @@ void TRouter::txProcess()
 
 	  if ( !buffer[i].IsEmpty() )
 	    {
-	      cout << "[ROUTER " << local_id <<"] txProcess: buffer["<<i<<"] not empty" << endl;
+	      cout << "[node " << local_id <<"] txProcess: buffer["<<i<<"] not empty" << endl;
 	      TPacket packet = buffer[i].Front();
 	      packet.dir_in = i;
 
@@ -101,7 +100,7 @@ void TRouter::txProcess()
 	      {
 		  vector<int> directions;
 
-		    cout << "[ROUTER " << local_id << "]:txProcess flooding packet from in " << i << " with id " << packet.id << endl; 
+		    cout << "[node " << local_id << "]:txProcess flooding packet from in " << i << " with id " << packet.id << endl; 
 		    // note: broadcast should not send to the following directions:
 		    // - DIRECTION_LOCAL (that is 4)
 		    // - the direction which the packet came from (that is i)
@@ -109,7 +108,7 @@ void TRouter::txProcess()
 		    {
 			  if ( (d!=i) && (reservation_table.isAvailable(d)) )
 			  {
-			      cout << "[ROUTER " << local_id << "]:txProcess (flooding) adding reservation  i="<<i<<",o="<<d<<endl;
+			      //cout << "[node " << local_id << "]:txProcess (flooding) adding reservation  i="<<i<<",o="<<d<<endl;
 			      directions.push_back(d);
 
 			      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
@@ -136,11 +135,11 @@ void TRouter::txProcess()
 	      /*
 	      else  if (process_out==FORWARD_CONFIRM)
 	      {
-		  cout << "[ROUTER " << local_id << "]:txProcess FORWARD_CONFIRM, adding reservation i="<<i<<",o="<<disr.flooding_path<<endl;
+		  cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, adding reservation i="<<i<<",o="<<disr.flooding_path<<endl;
                   if (reservation_table.isAvailable(this->disr.flooding_path))
 		      reservation_table.reserve(i, this->disr.flooding_path);
 		      else
-		      cout << "[ROUTER " << local_id << "]:txProcess FORWARD_CONFIRM, CRITICAL: flooding path "<<disr.flooding_path<< " not available!" << endl;
+		      cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, CRITICAL: flooding path "<<disr.flooding_path<< " not available!" << endl;
 	      }
 	      */
 	      else  if (process_out==END_CONFIRM)
@@ -151,7 +150,7 @@ void TRouter::txProcess()
 	      else if ( (process_out>=0 && process_out<=4) && (reservation_table.isAvailable(process_out) ) )
 		{
 
-		  cout << "[ROUTER " << local_id << "]:txProcess adding reservation i="<<i<<",o="<<process_out<<endl;
+		  //cout << "[node " << local_id << "]:txProcess adding reservation i="<<i<<",o="<<process_out<<endl;
 		  reservation_table.reserve(i, process_out);
 
 		  if(TGlobalParams::verbose_mode > VERBOSE_OFF)
@@ -186,7 +185,7 @@ void TRouter::txProcess()
 		  if (directions.size()>0)
 		  {
 		      // DEBUG
-		      //cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to MULT-DIR ";
+		      cout << "[node " << local_id << "] FORWARDING from DIR " << i << " to MULTDIR ";
 		      for (unsigned int j=0;j<directions.size();j++)
 		      {
 			  cout << directions[j] << ",";
@@ -211,7 +210,7 @@ void TRouter::txProcess()
 			      req_tx[o].write(current_level_tx[o]);
 
 			      // DEBUG
-			      //cout << "****DEBUG***** " << " ROUTER " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
+			      //cout << "****DEBUG***** " << " node " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
 
 			      // TODO: always release ?
 			    reservation_table.release(o);
@@ -238,7 +237,7 @@ void TRouter::txProcess()
 		  }
 		  else
 		  {
-		      cout << "****DEBUG***** " << " ROUTER " << local_id << " CRITICAL: no reservation for input  " << i << endl;
+		      cout << "****DEBUG***** " << " node " << local_id << " CRITICAL: no reservation for input  " << i << endl;
 		  }
 	      }*/
 	      else  if (process_out==CONFIRM)
@@ -253,7 +252,7 @@ void TRouter::txProcess()
 		  // avoid the scanning of direction to continue in
 		  // this cycle
 
-		  cout << "****DEBUG***** " << " ROUTER " << local_id << " thrashing confirmed request from dir " << i << endl;
+		  cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
 		  process_out = NOT_VALID;
 		  buffer[i].Pop();
 	      }
@@ -266,7 +265,7 @@ void TRouter::txProcess()
 	      else if (process_out>=0 && process_out<=4) 
 	      {
 		  int o = reservation_table.getOutputPort(i);
-		  cout << "****DEBUG***** " << " ROUTER " << local_id << " FORWARDING from DIR " << i << " to DIR " << o << endl;
+		  cout << "****DEBUG***** " << " node " << local_id << " FORWARDING from DIR " << i << " to DIR " << o << endl;
 		  // DEBUG
 		  if (o != NOT_RESERVED)
 		    {
@@ -286,7 +285,7 @@ void TRouter::txProcess()
 			  buffer[i].Pop();
 
 			  // DEBUG
-			  cout << "****DEBUG***** " << " ROUTER " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
+			//  cout << "****DEBUG***** " << " node " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
 
 			  // TODO: always release ?
 			reservation_table.release(o);
@@ -296,7 +295,7 @@ void TRouter::txProcess()
 		    }
 		  else
 		  {
-		      cout << "****DEBUG***** " << " ROUTER " << local_id << " CRITICAL: no reservation for input  " << i << endl;
+		      cout << "****DEBUG***** " << " node " << local_id << " CRITICAL: no reservation for input  " << i << endl;
 		  }
 
 		  ///////////////////////////////////////////////
