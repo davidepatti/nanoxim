@@ -23,9 +23,10 @@ using namespace std;
 // flood all available out directions, ignore packet, confirm requests
 #define FLOOD_MODE    100
 #define IGNORE	101
-//#define FORWARD_CONFIRM 102 // check if necessary
+#define FORWARD_REQUEST 102 // check if necessary
 #define END_CONFIRM 103
 #define CONFIRM 104
+#define CANCEL_REQUEST 105
 
 // Generic not reserved resource
 #define NOT_RESERVED          -2
@@ -40,6 +41,8 @@ using namespace std;
 #define VISITED 1
 #define TVISITED 2
 #define ALL 3
+
+#define MAX_TIMEOUT 100
 
 
 
@@ -68,6 +71,7 @@ enum DiSR_status { BOOTSTRAP,
                    READY_SEARCHING, 
 		   ACTIVE_SEARCHING, 
 		   CANDIDATE, 
+		   CANDIDATE_STARTING, 
 		   ASSIGNED, 
 		   FREE 
 };
@@ -141,6 +145,7 @@ struct TChannelStatus
 enum TPacketType
 {
   STARTING_SEGMENT_REQUEST,
+  STARTING_SEGMENT_CONFIRM,
   SEGMENT_REQUEST,
   SEGMENT_CONFIRM,
   SEGMENT_CANCEL
@@ -200,11 +205,13 @@ class DiSR
 
     private:
   int next_free_link();
+  int has_free_link() const;
   bool sanity_check();
   void print_status() const;
   void bootstrap_node();
   void setStatus(const DiSR_status&);
   void confirm_starting_segment(TPacket&);
+  void investigate_links();
 
 
   // Local environment data (LED)
@@ -221,6 +228,8 @@ class DiSR
   int subnet;
   int current_link;
   TRouter * router;
+
+  int timeout;
 
   DiSR_status status;
   
@@ -261,6 +270,7 @@ inline ostream& operator << (ostream& os, const TPacket& packet)
 	case STARTING_SEGMENT_REQUEST: os << "Packet Type is STARTING_SEGMENT_REQUEST" << endl; break;
 	case SEGMENT_REQUEST: os << "Packet Type is SEGMENT_REQUEST" << endl; break;
 	case SEGMENT_CONFIRM: os << "Packet Type is SEGMENT_CONFIRM" << endl; break;
+	case STARTING_SEGMENT_CONFIRM: os << "Packet Type is STARTING_SEGMENT_CONFIRM" << endl; break;
 	case SEGMENT_CANCEL: os << "Packet Type is SEGMENT_CANCEL" << endl; break;
       }
       os << "Total number of hops:" << packet.hop_no << endl;
