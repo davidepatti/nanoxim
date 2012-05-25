@@ -40,7 +40,7 @@ void TRouter::rxProcess()
 
 	    if ( (req_rx[i].read()==1-current_level_rx[i]) && !buffer[i].IsFull() )
 	    {
-		cout << "[node " << local_id <<"] rxProcess() can receive from dir " << i << " with non-empty buffer" << endl;
+		//cout << "[node " << local_id <<"] rxProcess() can receive from dir " << i << " with non-empty buffer" << endl;
 		TPacket received_packet = packet_rx[i].read();
 
 		if(TGlobalParams::verbose_mode > VERBOSE_OFF)
@@ -246,15 +246,14 @@ void TRouter::txProcess()
 		  // starting from the current router
 		  // - An appropriate confirmation packet has been generated and put
 		  // to the local  buffer by the DiSR::process()
-		  // - Must remove the received packet from the input
-		  // buffer 
-		  // - Must also cancel the state of process_out to
-		  // avoid the scanning of direction to continue in
+		  // - Must remove the received packet from the input buffer 
+		  // - Must also cancel the state of process_out to avoid the scanning of direction to continue in
 		  // this cycle
+		  // - Must set the incoming link id with the proper segment id
 
 		  cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
-		  process_out = NOT_VALID;
 		  buffer[i].Pop();
+		  process_out = NOT_VALID;
 	      }
 	      else if (process_out == END_CONFIRM)
 	      {

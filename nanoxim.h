@@ -210,7 +210,7 @@ class DiSR
   void print_status() const;
   void bootstrap_node();
   void setStatus(const DiSR_status&);
-  void confirm_starting_segment(TPacket&);
+  void generate_starting_segment_confirm(TPacket&);
   void investigate_links();
 
 
