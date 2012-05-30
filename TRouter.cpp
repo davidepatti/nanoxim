@@ -76,90 +76,102 @@ void TRouter::txProcess()
     }
   else
     {
-	// The output of the process function
+	// For each direction, the output of the process function
       // note: since the process function can also involve control packets (e.g. DiSR) its output can be either a direction to be reserved
       // or an action to be taken (e.g. flooding)
-	int process_out;
+	int process_out[DIRECTIONS];
 
+
+      // /////////////////////////////////////////////////////////////////////////
       // 1st phase: Reservation
-      for(int j=0; j<DIRECTIONS+1; j++)
+      // /////////////////////////////////////////////////////////////////////////
+	for(int j=0; j<DIRECTIONS+1; j++)
 	{
-	  int i = (start_from_port + j) % (DIRECTIONS + 1);
+	    int i = (start_from_port + j) % (DIRECTIONS + 1);
 
+	    process_out[i] = NOT_VALID;
 
-	  if ( !buffer[i].IsEmpty() )
+	    if ( !buffer[i].IsEmpty() )
 	    {
-	      cout << "[node " << local_id <<"] txProcess: buffer["<<i<<"] not empty" << endl;
-	      TPacket packet = buffer[i].Front();
-	      packet.dir_in = i;
 
-	      process_out = process(packet);
+		//cout << "[node " << local_id <<"] txProcess: buffer["<<i<<"] not empty @time " << sc_time_stamp().to_double()/1000 <<  endl;
+		TPacket packet = buffer[i].Front();
+		packet.dir_in = i;
 
-	      // broadcast required //////////////////////////
-	      if (process_out == FLOOD_MODE)
-	      {
-		  vector<int> directions;
+		process_out[i] = process(packet);
+		//cout << "DEBUG*** [node " << local_id <<"] process_out["<<i<<"]  = " << process_out[i] << " @time " << sc_time_stamp().to_double()/1000 <<  endl;
 
-		    cout << "[node " << local_id << "]:txProcess flooding packet from in " << i << " with id " << packet.id << endl; 
-		    // note: broadcast should not send to the following directions:
+		// broadcast required //////////////////////////
+		if (process_out[i] == ACTION_FLOOD)
+		{
+		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_FLOOD [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		    vector<int> directions;
+
+		    //  broadcast should not send to the following directions:
 		    // - DIRECTION_LOCAL (that is 4)
 		    // - the direction which the packet came from (that is i)
 		    for (int d=0;d<DIRECTIONS;d++)
 		    {
-			  if ( (d!=i) && (reservation_table.isAvailable(d)) )
-			  {
-			      //cout << "[node " << local_id << "]:txProcess (flooding) adding reservation  i="<<i<<",o="<<d<<endl;
-			      directions.push_back(d);
+			if ( (d!=i) && (reservation_table.isAvailable(d)) )
+			{
+			    //cout << "[node " << local_id << "]:txProcess (flooding) adding reservation  i="<<i<<",o="<<d<<endl;
+			    directions.push_back(d);
+			}
+		    }
+		    reservation_table.reserve(i, directions);
 
-			      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
-			      {
-				  cout << sc_time_stamp().to_double()/1000 
-				      << ": Router[" << local_id 
-				      << "], Input[" << i << "] (" << buffer[i].Size() << " packets)" 
-				      << ", reserved Output[" << d << "], packet: " << packet << endl;
-			      }		      
-			  }
-		  }
-		  reservation_table.reserve(i, directions);
-		  
-		  // TODO: Update DiSR LED - here or in actual
-		  // forwading ???
-		  this->disr.setLinks(TVISITED,directions,packet.id);
-		  this->disr.flooding_path = packet.dir_in;
+		    // TODO: Update DiSR LED - here or in actual forwading ???
+		    this->disr.setLinks(TVISITED,directions,packet.id);
+		    this->disr.flooding_path = packet.dir_in;
 
-	      }
-	      else if (process_out==IGNORE)
-	      {
-		  //TODO: take some action in reservation phase ?
-	      }
-	      /*
-	      else  if (process_out==FORWARD_CONFIRM)
-	      {
-		  cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, adding reservation i="<<i<<",o="<<disr.flooding_path<<endl;
-                  if (reservation_table.isAvailable(this->disr.flooding_path))
-		      reservation_table.reserve(i, this->disr.flooding_path);
-		      else
-		      cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, CRITICAL: flooding path "<<disr.flooding_path<< " not available!" << endl;
-	      }
-	      */
-	      else  if (process_out==END_CONFIRM)
-	      {
-	      }
+		}
+		else if (process_out[i]==ACTION_SKIP)
+		{
+		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_SKIP [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		    //TODO: take some action in reservation phase ?
+		}
+		else if (process_out[i]==ACTION_DISCARD)
+		{
+		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_DISCARD [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		    //TODO: take some action in reservation phase ?
+		}
+		/*
+		   else  if (process_out==FORWARD_CONFIRM)
+		   {
+		   cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, adding reservation i="<<i<<",o="<<disr.flooding_path<<endl;
+		   if (reservation_table.isAvailable(this->disr.flooding_path))
+		   reservation_table.reserve(i, this->disr.flooding_path);
+		   else
+		   cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, CRITICAL: flooding path "<<disr.flooding_path<< " not available!" << endl;
+		   }
+		 */
+		else  if (process_out[i]==ACTION_END_CONFIRM)
+		{
+		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_END_CONFIRM [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		}
 
 		// not control mode, just reserve a direction
-	      else if ( (process_out>=0 && process_out<=4) && (reservation_table.isAvailable(process_out) ) )
+		else if ( (process_out[i]>=0 && process_out[i]<=4) && (reservation_table.isAvailable(process_out[i]) ) )
 		{
+		    //cout << "[node " << local_id << "]:txProcess adding reservation i="<<i<<",o="<<process_out<<endl;
+		    reservation_table.reserve(i, process_out[i]);
 
-		  //cout << "[node " << local_id << "]:txProcess adding reservation i="<<i<<",o="<<process_out<<endl;
-		  reservation_table.reserve(i, process_out);
-
-		  if(TGlobalParams::verbose_mode > VERBOSE_OFF)
-		    {
-		      cout << sc_time_stamp().to_double()/1000 
-			   << ": Router[" << local_id 
-			   << "], Input[" << i << "] (" << buffer[i].Size() << " packets)" 
-			   << ", reserved Output[" << process_out << "], packet: " << packet << endl;
-		    }		      
+		}
+		else if (process_out[i]==ACTION_CONFIRM)
+		{
+		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_CONFIRM [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  // a confirmation packet has been injected in the local buffer that will be processed on next cycle
+		  process_out[DIRECTION_LOCAL] = ACTION_SKIP;
+		}
+		else if (process_out[i]==NOT_VALID)
+		{
+		  cout << "[node " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		    assert(false);
+		}
+		else 
+		{
+		  cout << "[node " << local_id << "]: CRITICAL, UNSUPPORTED process("<<i<<") =  " << process_out[i] << " [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		    assert(false);
 		}
 	    }
 	}
@@ -167,29 +179,27 @@ void TRouter::txProcess()
 
       // 2nd phase: Forwarding
       for(int i=0; i<DIRECTIONS+1; i++)
-	{
+      {
 	  if ( !buffer[i].IsEmpty() )
-	    {
+	  {
+	      cout << "[node " << local_id <<"] txProcess (forwarding): buffer["<<i<<"] not empty @time " << sc_time_stamp().to_double()/1000 <<  endl;
 
 	      TPacket packet = buffer[i].Front();
 
 	      ////////////////////////////////////////////////////////////
-	      if (process_out==FLOOD_MODE)
+	      if (process_out[i]==ACTION_FLOOD)
 	      {
 		  vector<int> directions = reservation_table.getMultiOutputPort(i);
 
-		  // Note that even with FLOOD_MODE set  directions could be an empty or single value vector, if no other channels were available at the moment 
-		  // Anyway, during flooding phase the packet should be removed from buffer, since the reserved output destinations mean
-		  // that those outputs have been flooded
-		 
+		  // Note that even with ACTION_FLOOD set  directions could be an empty or single value vector, if no other channels were available at the moment 
+
 		  if (directions.size()>0)
 		  {
 		      // DEBUG
 		      cout << "[node " << local_id << "] FORWARDING from DIR " << i << " to MULTDIR ";
 		      for (unsigned int j=0;j<directions.size();j++)
-		      {
 			  cout << directions[j] << ",";
-		      }
+
 		      cout << endl;
 
 		      for (unsigned int j=0;j<directions.size();j++)
@@ -197,14 +207,7 @@ void TRouter::txProcess()
 			  int o = directions[j]; // current out dir
 
 			  if ( current_level_tx[o]== ack_tx[o].read() )
-			    {
-			      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
-				{
-				  cout << sc_time_stamp().to_double()/1000 
-				       << ": Router[" << local_id 
-				       << "], Input[" << i << "] forward to Output[" << o << "], packet: " << packet << endl;
-				}
-
+			  {
 			      packet_tx[o].write(packet);
 			      current_level_tx[o] = 1 - current_level_tx[o];
 			      req_tx[o].write(current_level_tx[o]);
@@ -213,34 +216,42 @@ void TRouter::txProcess()
 			      //cout << "****DEBUG***** " << " node " << local_id << " is FORWARDING writing " << current_level_tx[o] << " on DIR " << o << endl;
 
 			      // TODO: always release ?
-			    reservation_table.release(o);
+			      reservation_table.release(o);
 
-			    }
+			  }
 		      }
 
 		  }
+		  // Anyway, during flooding phase the packet should be removed from buffer, since the reserved output destinations mean
+		  // that those outputs have been flooded
 		  buffer[i].Pop();
 
 	      }
-	      else if (process_out == IGNORE)
+	      else if (process_out[i] == ACTION_DISCARD)
 	      {
+		  cout << "[node " << local_id << "] discarding packet from dir " << i << endl;
 		  // just trash the packet 
 		  buffer[i].Pop();
 	      }
-	      /*
-	      else  if (process_out==FORWARD_CONFIRM)// USELESS ??!?!?
+	      else if (process_out[i] == ACTION_SKIP)
 	      {
-		  int o = reservation_table.getOutputPort(i);
-		  // DEBUG
-		  if (o != NOT_RESERVED)
-		  {
-		  }
-		  else
-		  {
-		      cout << "****DEBUG***** " << " node " << local_id << " CRITICAL: no reservation for input  " << i << endl;
-		  }
+		  cout << "[node " << local_id << "] skipping processing from dir " << i << endl;
+		  // skip packet processing to next cycle
+	      }
+	      /*
+		 else  if (process_out==FORWARD_CONFIRM)// USELESS ??!?!?
+		 {
+		 int o = reservation_table.getOutputPort(i);
+	      // DEBUG
+	      if (o != NOT_RESERVED)
+	      {
+	      }
+	      else
+	      {
+	      cout << "****DEBUG***** " << " node " << local_id << " CRITICAL: no reservation for input  " << i << endl;
+	      }
 	      }*/
-	      else  if (process_out==CONFIRM)
+	      else  if (process_out[i]==ACTION_CONFIRM)
 	      {
 		  // - The received packet will issue a confirmation phase
 		  // starting from the current router
@@ -253,55 +264,66 @@ void TRouter::txProcess()
 
 		  cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
 		  buffer[i].Pop();
-		  process_out = NOT_VALID;
+		  //		  process_out[i] = NOT_VALID;
 	      }
-	      else if (process_out == END_CONFIRM)
+	      else if (process_out[i] == ACTION_END_CONFIRM)
 	      {
 		  // just trash the packet 
 		  buffer[i].Pop();
+		  /*
+		  cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
+		  */
 	      }
 	      /// single dest ////////////////////////////////
-	      else if (process_out>=0 && process_out<=4) 
+	      else if (process_out[i]>=0 && process_out[i]<=4) 
 	      {
 		  int o = reservation_table.getOutputPort(i);
-		  cout << "****DEBUG***** " << " node " << local_id << " FORWARDING from DIR " << i << " to DIR " << o << endl;
+		  cout << "[node " << local_id << "] FORWARDING FROM " << i << " TO " << o << endl;
 		  // DEBUG
 		  if (o != NOT_RESERVED)
-		    {
+		  {
 
 		      if ( current_level_tx[o] == ack_tx[o].read() )
-			{
-			  if(TGlobalParams::verbose_mode > VERBOSE_OFF)
-			    {
-			      cout << sc_time_stamp().to_double()/1000 
-				   << ": Router[" << local_id 
-				   << "], Input[" << i << "] forward to Output[" << o << "], packet: " << packet << endl;
-			    }
-
+		      {
 			  packet_tx[o].write(packet);
 			  current_level_tx[o] = 1 - current_level_tx[o];
 			  req_tx[o].write(current_level_tx[o]);
 			  buffer[i].Pop();
 
 			  // DEBUG
-			//  cout << "****DEBUG***** " << " node " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
+			  //  cout << "****DEBUG***** " << " node " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
 
 			  // TODO: always release ?
-			reservation_table.release(o);
-			    
+			  reservation_table.release(o);
+
 			  // Update stats
-			}
-		    }
+		      }
+		  }
 		  else
 		  {
-		      cout << "****DEBUG***** " << " node " << local_id << " CRITICAL: no reservation for input  " << i << endl;
+		      cout << "[node " << local_id << "] WARNING: no available reservation for input  " << i << endl;
 		  }
 
 		  ///////////////////////////////////////////////
 	      }
-	    }
-	}
-    } // else
+		else if (process_out[i]==NOT_VALID)
+		{
+		  // Case 1: 
+		  // this also happens when a confirmation event thrashes the
+		  // received packet on a given direction D in order to
+		  // inject a CONFIRM packet from the local direction towards D. The buffer[DIRECTION_LOCAL] is found not empty
+		  // but the associated process_out remains NOT_VALID
+		  cout << "[node " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		    assert(false);
+		}
+		else 
+		{
+		  cout << "[node " << local_id << "]: CRITICAL, UNSUPPORTED process("<<i<<") =  " << process_out[i] << " [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		    assert(false);
+		}
+	  } // if buffer not empty
+      } // for directions
+    } // else read
 }
 
 //---------------------------------------------------------------------------

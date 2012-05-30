@@ -173,15 +173,15 @@ int DiSR::process(TPacket& p)
 	    cout << "[node "<<router->local_id<<"] DiSR::process() confirming STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
 	    setStatus(ASSIGNED);
 
-	    generate_starting_segment_confirm(p);
-	    return CONFIRM; 
+	    generate_segment_confirm(p);
+	    return ACTION_CONFIRM; 
 	}
 	// foreign starting segment request ////////////////////////////////////
 	else if (  p.src_id!=router->local_id ) 
 	{
 	    if (this->getStatus()==FREE)
 	    {
-		cout << "[node "<<router->local_id << "] DiSR::process() enable FLOOD_MODE" << endl;
+		cout << "[node "<<router->local_id << "] DiSR::process() enable ACTION_FLOOD" << endl;
 
 		this->segID = packet_segment_id;
 		tvisited = true;
@@ -191,17 +191,18 @@ int DiSR::process(TPacket& p)
 		setStatus(CANDIDATE_STARTING);
 		// TODO: after flooding links has been selecte by the
 		// router, the LED variable should be update accordingly
-		return FLOOD_MODE;
+		return ACTION_FLOOD;
 	    }
 		// ignore flooding if packet already received....
 	    else
 	    {
 		// TODO: determine more accurately what happened....
-		cout << "[node "<< router->local_id <<  "] DiSR::process() ignore flooding, already done" << endl;
-		return IGNORE;
+		cout << "[node "<< router->local_id <<  "] DiSR::process() discarding flooding, already done!" << endl;
+		return ACTION_DISCARD;
 	    }
 	    
 	}
+	assert(false);
     }
     /////////////////////////////////////////////////////////
     else if (p.type == SEGMENT_REQUEST)
@@ -218,67 +219,136 @@ int DiSR::process(TPacket& p)
 	// foreign segment request
 	else if (  p.src_id!=router->local_id ) 
 	{
+	    /* A SEGMENT_REQUEST packet reached a free node
+	     * If a free link is available node becomes CANDIDATE and forward the packet
+	     * Otherwise, segment request is cancelled along that direction  */
 	    if (this->getStatus()==FREE)
 	    {
-		/*
-		cout << "[node "<<router->local_id << "] DiSR::process() enable FLOOD_MODE" << endl;
-
-		this->segID = packet_segment_id;
-		tvisited = true;
+		// first of all, the incoming direction becomes tvisited 
+		link_visited[p.dir_in] = freeid;
 		link_tvisited[p.dir_in] = packet_segment_id;
 
+		//next, search for a suitable link
+		int freedirection = next_free_link();
 
-		setStatus(CANDIDATE);
-		// TODO: after flooding links has been selecte by the
-		// router, the LED variable should be update accordingly
-		// */
-		return FORWARD_REQUEST;
+		if (freedirection!=NOT_VALID)
+		{
+		    this->segID = packet_segment_id;
+		    this->tvisited = true;
+		    this->visited = false;
+
+		    link_tvisited[freedirection] = packet_segment_id;
+
+		    cout << "[node "<< router->local_id <<  "] DiSR::process() setting CANDIDATE id " << this->segID << " forwarding to " << freedirection <<endl;
+		    this->setStatus(CANDIDATE);
+		    return freedirection;
+		}
+		else
+		{
+		    // there's no available link
+		    link_tvisited[p.dir_in] = freeid;
+		    cout << "[node "<< router->local_id <<  "] DiSR::process(), no available link, cancelling SEGMENT_REQUEST id " << packet_segment_id << endl;
+		    return ACTION_CANCEL_REQUEST;
+		}
+
+
 	    }
-	    // A normal SEGMENT_REQUEST packet reached a node
-	    // candidate for starting segment. This means the starting
+	    // A SEGMENT_REQUEST packet reached a node candidate for starting segment:
+	    // - In every case, this means the starting
 	    // segment has already been estabilished and the node must cancel a previous LED settings
+	    // - Further, in a free link is available, should forward
+	    // the request  packet, otherwise send a cancel request
+	    //
+	    // TODO: UPDATE CRITICAL
+	    // This is not ncessarily true: that is, maybe the node
+	    // WILL BELONG to the starting segment that is being
+	    // formed, so the segment request should not interrupt
+	    // this process!
 	    else if (this->getStatus()==CANDIDATE_STARTING)
 	    {
-		this->segID = packet_segment_id;
-		this->tvisited = true;
-		this->visited = false;
-
+		cout << "[node "<< router->local_id <<  "] DiSR::process() cancelling previous CANDIDATE_STARTING " << this->segID << " due SEGMENT_REQUEST with id " << packet_segment_id << endl;
+		// reset the previous LED data
 		for (int i=0;i<DIRECTIONS;i++)
 		{
 		    link_visited[i] = freeid;
 		    link_tvisited[i] = freeid;
 
 		}
-		// the incoming direction becomes tvisited 
-		link_visited[p.dir_in] = freeid;
-		link_tvisited[p.dir_in] = packet_segment_id;
-
 		// since link status has been updated, the pointer of
 		// the current link to be investigated must be resetted
 		current_link = 0;
 
-		cout << "[node "<< router->local_id <<  "] DiSR::process() cancelling previous CANDIDATE_STARTING and setting CANDIDATE with id " << this->segID << endl;
-		this->setStatus(CANDIDATE);
+		// the incoming direction becomes tvisited 
+		link_visited[p.dir_in] = freeid;
+		link_tvisited[p.dir_in] = packet_segment_id;
+
+		int freedirection = next_free_link();
+
+		if (freedirection!=NOT_VALID)
+		{
+		    cout << "[node "<< router->local_id <<  "] DiSR::process() setting CANDIDATE with id " << this->segID << endl;
+		    this->segID = packet_segment_id;
+		    this->tvisited = true;
+		    this->visited = false;
+
+		    // the incoming direction becomes tvisited 
+		    link_visited[p.dir_in] = freeid;
+		    link_tvisited[p.dir_in] = packet_segment_id;
+		    this->setStatus(CANDIDATE);
+		    return freedirection;
+		}
+		else
+		{
+		    print_status();
+		    return ACTION_SKIP;
+		}
+	    }
+	    // a segment request reached a node currently performing a
+	    // find segment process
+	    // This means that the node is already assigned and
+	    // visited and thus can confirm the request
+	    else if (this->getStatus()==ACTIVE_SEARCHING)
+	    {
+		assert(this->visited);
+		// the incoming direction becomes visited 
+		link_visited[p.dir_in] = packet_segment_id;
+		link_tvisited[p.dir_in] = freeid;
+		generate_segment_confirm(p);
+		return ACTION_CONFIRM;
+
+	    }
+	    // a segment request reached a node already candidate,
+	    // cancel the request along that direction
+	    // TODO: or shuould retry ? if the node becomes assigned
+	    // the segment could be confirmed !
+	    else if (this->getStatus()==CANDIDATE)
+	    {
+		cout << "[node "<< router->local_id <<  "] DiSR::process() already CANDIDATE with id " << this->segID << ", cancelling request "<< packet_segment_id <<endl;
+		return ACTION_CANCEL_REQUEST;
+
 	    }
 	    else
 	    {
-		// TODO: determine more accurately what happened....
-		cout << "[node "<< router->local_id <<  "] DiSR::process() node  cancelling request:" << endl;
+		// TODO: catch any remainig case
+		cout << "[node "<< router->local_id <<  "] DiSR::process() CRITICAL, unsupported status" << endl;
 		print_status();
-		return CANCEL_REQUEST;
+		assert(false);
+		return NOT_VALID;
 	    }
 	    
 	}
 	// the packet returned to its orginal source
 	else if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
+	    assert(false);
+	    // TODO: can this happen ?
 	    /*
 	    this->segID = packet_segment_id;
 	    cout << "[node "<<router->local_id<<"] DiSR::process() confirming STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
 	    setStatus(ASSIGNED);
 	    generate_confirm_starting_segment(p);
 	    */
-	    return IGNORE; 
+	    return ACTION_SKIP; 
 	}
     }
 
@@ -293,12 +363,11 @@ int DiSR::process(TPacket& p)
 	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
 	{
 	    cout << "[node "<<router->local_id << "] DiSR::process() sending locally generated STARTING_SEGMENT_CONFIRM with id " << packet_segment_id << " towards " << p.dir_out << endl;
-	     // inject the packet to the appropriate link previously found by generate_starting_segment_confirm()
+	     // inject the packet to the appropriate link previously found by generate_segment_confirm()
 	    return p.dir_out;
 	}
 	// foreign confirm segment request
-	else
-	if (  p.src_id!=router->local_id ) 
+	else if (  p.src_id!=router->local_id ) 
 	{
 
 	    if  ( (this->getStatus()==CANDIDATE_STARTING) && (local_segment_id == packet_segment_id) )
@@ -344,7 +413,7 @@ int DiSR::process(TPacket& p)
 		cout << "[node "<<router->local_id << "] DiSR::process()  local segid = " << local_segment_id << " , packet id = " << packet_segment_id << ", ";
 		print_status();
 		assert(false);
-		return IGNORE;
+		return ACTION_SKIP;
 	    }
 	    
 	    
@@ -354,11 +423,12 @@ int DiSR::process(TPacket& p)
 	{
 	    cout << "[node "<<router->local_id<<"] DiSR::process()  confirmation process of segment id " << packet_segment_id <<  " ENDED !" << endl;
 	    setStatus(ASSIGNED);
-	    return END_CONFIRM; 
+	    return ACTION_END_CONFIRM; 
 	}
+	assert(false);
     }
 
-    return IGNORE;
+    return NOT_VALID;
 }
 
 
@@ -399,7 +469,7 @@ void DiSR::release_flooding_paths()
 
 int DiSR::next_free_link()
 {
-    cout << "[DiSR::next_free_link() on  "<<router->local_id<<"]" << endl;
+    //cout << "[DiSR::next_free_link() on  "<<router->local_id<<"]" << endl;
     while (current_link<DIRECTION_LOCAL)
     {
 
@@ -420,7 +490,7 @@ int DiSR::next_free_link()
 // link function calls
 int DiSR::has_free_link() const
 {
-    cout << "[DiSR::has_free_link() on  "<<router->local_id<<"]" << endl;
+    //cout << "[DiSR::has_free_link() on  "<<router->local_id<<"]" << endl;
     int tmp_link = current_link;
 
     while (tmp_link<DIRECTION_LOCAL)
@@ -488,7 +558,7 @@ void DiSR::update_status()
 
     if (1)
 	if (this->status==ASSIGNED && has_free_link() )
-	    investigate_links();
+	    start_investigate_links();
 
     if (this->status==CANDIDATE_STARTING)
     {
@@ -514,6 +584,9 @@ void DiSR::update_status()
 	timeout--;
 	if (timeout>0)
 	{
+	    if (has_free_link()) 
+		continue_investigate_links();
+
 	    if (timeout%50==0)
 		cout << "[node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE remaining timeout: " << timeout << endl;
 	}
@@ -527,9 +600,11 @@ void DiSR::update_status()
     }
 }
 
-void DiSR::investigate_links()
+// a visited node connected to not visited/tvisited links can start
+// investigating its links
+void DiSR::start_investigate_links()
 {
-	cout << "[node "<<router->local_id<<"] DiSR::investigate_links()" << endl;
+	cout << "[node "<<router->local_id<<"] DiSR::start_investigate_links()" << endl;
 
 	/////////////////////////////////////////////////////////////////////////////////
 	//must search for a segment
@@ -554,18 +629,55 @@ void DiSR::investigate_links()
 	    packet.dir_out = candidate_link;
 	    packet.hop_no = 0;
 
-	    cout << "[node "<<router->local_id<<"] DiSR::investigate_links() injecting SEGMENT_REQUEST " << segment_id << " towards direction " << candidate_link << endl;
+	    cout << "[node "<<router->local_id<<"] DiSR::start_investigate_links() injecting SEGMENT_REQUEST " << segment_id << " towards direction " << candidate_link << endl;
 	    router->inject_to_network(packet);
 
 	}
 	else
 	{
-	    cout << "[node  "<<router->local_id<<"] DiSR::investigate_link() (no suitable links)" << endl;
+	    cout << "[node  "<<router->local_id<<"] DiSR::start_investigate_link() WARNING, no suitable links!" << endl;
+	}
+
+}
+
+// a candidate node connected to not visited/tvisited links can continue investigating its links
+void DiSR::continue_investigate_links()
+{
+	cout << "[node "<<router->local_id<<"] DiSR::continue_investigate_links()" << endl;
+
+	/////////////////////////////////////////////////////////////////////////////////
+	//must search for a segment
+
+	int candidate_link = next_free_link();
+
+	if (candidate_link!=NOT_VALID)
+	{
+	    /*
+	    // mark the link and the node with id of segment request
+	    link_tvisited[candidate_link] = this->segID;
+
+	    // prepare the packet
+	    TPacket packet;
+	    packet.id = segment_id;
+	    packet.src_id = router->local_id;
+	    packet.type = SEGMENT_REQUEST;
+	    packet.dir_in = DIRECTION_LOCAL;
+	    packet.dir_out = candidate_link;
+	    packet.hop_no = 0;
+
+	    cout << "[node "<<router->local_id<<"] DiSR::investigate_links() injecting SEGMENT_REQUEST " << segment_id << " towards direction " << candidate_link << endl;
+	    router->inject_to_network(packet);
+	    */
+
+
+	}
+	else
+	{
+	    cout << "[node  "<<router->local_id<<"] DiSR::continue_investigate_link() (no suitable links)" << endl;
 	}
 	///////////////////// end injecting starting segment //////
 
 }
-
 
 void DiSR::bootstrap_node()
 {
@@ -612,18 +724,31 @@ void DiSR::bootstrap_node()
 // it in the network.
 // As a consequence, the rx process of the router will find the packet
 // on the buffer in the local direction
-void DiSR::generate_starting_segment_confirm(TPacket& p)
+void DiSR::generate_segment_confirm(TPacket& p)
 {
     TSegmentId segment_id = p.id;
-    cout << "[node "<<router->local_id<<"] DiSR::generate_starting_segment_confirm() STARTING_SEGMENT_REQUEST " << segment_id << " from direction " << p.dir_in << endl;
+
+    if (p.type==STARTING_SEGMENT_REQUEST)
+    {
+	cout << "[node "<<router->local_id<<"] DiSR::generate_segment_confirm() STARTING_SEGMENT_REQUEST " << segment_id << " from direction " << p.dir_in << endl;
+	p.type = STARTING_SEGMENT_CONFIRM;
+    }
+    else if (p.type==SEGMENT_REQUEST)
+    {
+	cout << "[node "<<router->local_id<<"] DiSR::generate_segment_confirm() SEGMENT_REQUEST " << segment_id << " from direction " << p.dir_in << endl;
+	p.type = SEGMENT_CONFIRM;
+
+    }
+    else
+    {
+	assert(false);
+    }
 
     // change only the data required when sending back the packet
-
-    p.type = STARTING_SEGMENT_CONFIRM;
     p.dir_out = p.dir_in;  // must return from where it came!
     p.dir_in = DIRECTION_LOCAL;
 
-    cout << "[node "<<router->local_id<<"] DiSR::generate_starting_segment_confirm() injecting STARTING_SEGMENT_CONFIRM " << segment_id << " towards direction " << p.dir_out << endl;
+    cout << "[node "<<router->local_id<<"] DiSR::generate_segment_confirm() injecting confirm with id " << segment_id << " towards direction " << p.dir_out << endl;
     router->inject_to_network(p);
 
 }

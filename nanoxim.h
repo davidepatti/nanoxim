@@ -21,12 +21,13 @@ using namespace std;
 
 // ACTIONS
 // flood all available out directions, ignore packet, confirm requests
-#define FLOOD_MODE    100
-#define IGNORE	101
-#define FORWARD_REQUEST 102 // check if necessary
-#define END_CONFIRM 103
-#define CONFIRM 104
-#define CANCEL_REQUEST 105
+#define ACTION_FLOOD    100
+#define ACTION_DISCARD	101
+#define ACTION_SKIP	102
+#define ACTION_FORWARD_REQUEST 103 // check if necessary
+#define ACTION_END_CONFIRM 104
+#define ACTION_CONFIRM 105
+#define ACTION_CANCEL_REQUEST 106
 
 // Generic not reserved resource
 #define NOT_RESERVED          -2
@@ -210,8 +211,9 @@ class DiSR
   void print_status() const;
   void bootstrap_node();
   void setStatus(const DiSR_status&);
-  void generate_starting_segment_confirm(TPacket&);
-  void investigate_links();
+  void generate_segment_confirm(TPacket&);
+  void start_investigate_links();
+  void continue_investigate_links();
 
 
   // Local environment data (LED)
