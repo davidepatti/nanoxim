@@ -122,7 +122,7 @@ void TRouter::txProcess()
 
 		    // TODO: Update DiSR LED - here or in actual forwading ???
 		    this->disr.setLinks(TVISITED,directions,packet.id);
-		    this->disr.flooding_path = packet.dir_in;
+		    this->disr.forwarding_path = packet.dir_in;
 
 		}
 		else if (process_out[i]==ACTION_SKIP)
@@ -138,11 +138,11 @@ void TRouter::txProcess()
 		/*
 		   else  if (process_out==FORWARD_CONFIRM)
 		   {
-		   cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, adding reservation i="<<i<<",o="<<disr.flooding_path<<endl;
-		   if (reservation_table.isAvailable(this->disr.flooding_path))
-		   reservation_table.reserve(i, this->disr.flooding_path);
+		   cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, adding reservation i="<<i<<",o="<<disr.forwarding_path<<endl;
+		   if (reservation_table.isAvailable(this->disr.forwarding_path))
+		   reservation_table.reserve(i, this->disr.forwarding_path);
 		   else
-		   cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, CRITICAL: flooding path "<<disr.flooding_path<< " not available!" << endl;
+		   cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, CRITICAL: flooding path "<<disr.forwarding_path<< " not available!" << endl;
 		   }
 		 */
 		else  if (process_out[i]==ACTION_END_CONFIRM)
@@ -151,10 +151,11 @@ void TRouter::txProcess()
 		}
 
 		// not control mode, just reserve a direction
-		else if ( (process_out[i]>=0 && process_out[i]<=4) && (reservation_table.isAvailable(process_out[i]) ) )
+		else if ( (process_out[i]>=0 && process_out[i]<=4))
 		{
-		    //cout << "[node " << local_id << "]:txProcess adding reservation i="<<i<<",o="<<process_out<<endl;
-		    reservation_table.reserve(i, process_out[i]);
+		    if (reservation_table.isAvailable(process_out[i]) )
+			//cout << "[node " << local_id << "]:txProcess adding reservation i="<<i<<",o="<<process_out<<endl;
+			reservation_table.reserve(i, process_out[i]);
 
 		}
 		else if (process_out[i]==ACTION_CONFIRM)
