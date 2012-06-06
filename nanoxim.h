@@ -159,13 +159,12 @@ enum TPacketType
 
 class TSegmentId
 {
-    public:
+private:
 	int node;
 	int link;
 
-	TSegmentId(int,int);
+public:
 	TSegmentId();
-
 
 	inline bool operator == (const TSegmentId& segid) const
 	{
@@ -183,7 +182,24 @@ class TSegmentId
 
 	}
 
+	inline void invalidate()
+	{
+	    this->node = NOT_VALID;
+	    this->link = NOT_VALID;
+	}
+
+	inline void set(int node, int link)
+	{
+	    this->node = node;
+	    this->link = link;
+
+	}
+
+	int getNode() { return this->node; };
+	int getLink() { return this->link; };
+
 };
+
 
 class TPacket;
 class TRouter;
@@ -201,7 +217,7 @@ class DiSR
   void invalidate(int);
   DiSR_status getStatus() const;
   void setLinks(int type, const vector<int>& directions,const TSegmentId& id);
-  unsigned int flooding_path; // the direction from which a flooding request came
+  unsigned int forwarding_path; // the direction from which a flooding request came
 
 
     private:
@@ -300,14 +316,14 @@ inline ostream& operator << (ostream& os, const TCoord& coord)
   return os;
 }
 
-inline ostream& operator << (ostream& os, const TSegmentId& segid)
+inline ostream& operator << (ostream& os, TSegmentId& segid)
 {
     if (segid.isFree())
 	os << "(.)";
     else if (!segid.isValid())
-	os << "( )";
+	os << "(!)";
     else
-      os << "(" << segid.node << "." << segid.link << ")";
+      os << "(" << segid.getNode() << "." << segid.getLink() << ")";
 
   return os;
 }

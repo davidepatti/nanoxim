@@ -10,12 +10,6 @@
 
 //---------------------------------------------------------------------------
 
-TSegmentId::TSegmentId(int node,int link)
-{
-    this->node = node;
-    this->link = link;
-}
-
 TSegmentId::TSegmentId()
 {
     this->node = NOT_RESERVED;
@@ -139,9 +133,8 @@ void DiSR::setLinks(int type, const vector<int>& directions,const TSegmentId& id
     // varibables have been properly updated
 int DiSR::process(TPacket& p)
 {
-    const TSegmentId freeid = TSegmentId(NOT_RESERVED,NOT_RESERVED);
-    const TSegmentId packet_segment_id = p.id;
-    const TSegmentId local_segment_id = this->segID;
+    TSegmentId packet_segment_id = p.id;
+    TSegmentId local_segment_id = this->segID;
 
     ////////////////////////////////////////////////////////
     if (p.type == STARTING_SEGMENT_REQUEST )
@@ -164,7 +157,7 @@ int DiSR::process(TPacket& p)
 	else if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
 	    this->segID = packet_segment_id;
-	    link_tvisited[p.dir_in] = freeid;
+	    link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 	    link_visited[p.dir_in] = packet_segment_id;
 
 	    // since link LED has been updated:
@@ -225,7 +218,7 @@ int DiSR::process(TPacket& p)
 	    if (this->getStatus()==FREE)
 	    {
 		// first of all, the incoming direction becomes tvisited 
-		link_visited[p.dir_in] = freeid;
+		link_visited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		link_tvisited[p.dir_in] = packet_segment_id;
 
 		//next, search for a suitable link
@@ -246,7 +239,7 @@ int DiSR::process(TPacket& p)
 		else
 		{
 		    // there's no available link
-		    link_tvisited[p.dir_in] = freeid;
+		    link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		    cout << "[node "<< router->local_id <<  "] DiSR::process(), no available link, cancelling SEGMENT_REQUEST id " << packet_segment_id << endl;
 		    return ACTION_CANCEL_REQUEST;
 		}
@@ -270,8 +263,13 @@ int DiSR::process(TPacket& p)
 		// reset the previous LED data
 		for (int i=0;i<DIRECTIONS;i++)
 		{
-		    link_visited[i] = freeid;
-		    link_tvisited[i] = freeid;
+		    // not valid direction (e.g. borderline) shouldn't
+		    // be updated
+		    if (link_visited[i].isValid() && link_tvisited[i].isValid())
+		    {
+			link_visited[i].set(NOT_RESERVED,NOT_RESERVED);
+			link_tvisited[i].set(NOT_RESERVED,NOT_RESERVED);
+		    }
 
 		}
 		// since link status has been updated, the pointer of
@@ -279,20 +277,20 @@ int DiSR::process(TPacket& p)
 		current_link = 0;
 
 		// the incoming direction becomes tvisited 
-		link_visited[p.dir_in] = freeid;
+		link_visited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		link_tvisited[p.dir_in] = packet_segment_id;
 
 		int freedirection = next_free_link();
 
 		if (freedirection!=NOT_VALID)
 		{
-		    cout << "[node "<< router->local_id <<  "] DiSR::process() setting CANDIDATE with id " << this->segID << endl;
+		    cout << "[node "<< router->local_id <<  "] DiSR::process() setting CANDIDATE with id " << packet_segment_id << endl;
 		    this->segID = packet_segment_id;
 		    this->tvisited = true;
 		    this->visited = false;
 
 		    // the incoming direction becomes tvisited 
-		    link_visited[p.dir_in] = freeid;
+		    link_visited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		    link_tvisited[p.dir_in] = packet_segment_id;
 		    this->setStatus(CANDIDATE);
 		    return freedirection;
@@ -312,7 +310,7 @@ int DiSR::process(TPacket& p)
 		assert(this->visited);
 		// the incoming direction becomes visited 
 		link_visited[p.dir_in] = packet_segment_id;
-		link_tvisited[p.dir_in] = freeid;
+		link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		generate_segment_confirm(p);
 		return ACTION_CONFIRM;
 
@@ -357,7 +355,7 @@ int DiSR::process(TPacket& p)
     ////////////////////////////////////////////////////////
     {
 
-	cout << "[node "<<router->local_id << "] DiSR::process() found STARTING_SEGMENT_CONFIRM with ID " << packet_segment_id << endl;
+	cout << "[node "<<router->local_id << "] DiSR::process() processing STARTING_SEGMENT_CONFIRM with ID " << packet_segment_id << endl;
 
 	 // locally generated starting segment packet confirmation, 
 	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
@@ -379,17 +377,22 @@ int DiSR::process(TPacket& p)
 
 		// the incoming link and flooding path change from tvsited to visited with the segment id
 		this->link_visited[p.dir_in] = packet_segment_id;
-		this->link_tvisited[p.dir_in] = freeid;
+		this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 
-		this->link_visited[flooding_path] = packet_segment_id;
-		this->link_tvisited[flooding_path] = freeid;
+		this->link_visited[forwarding_path] = packet_segment_id;
+		this->link_tvisited[forwarding_path].set(NOT_RESERVED,NOT_RESERVED);
 
 		// ...while all other links can return free....
 		for (int i=0;i<DIRECTIONS;i++) {
-		    if ( (i!=flooding_path) && (i!=p.dir_in) )
+		    if ( (i!=forwarding_path) && (i!=p.dir_in) )
 		    {
-			link_visited[i] = freeid;
-			link_tvisited[i] = freeid;
+			// exclude not valid directions (e.g. boundaries)
+
+			if (link_visited[i].isValid())
+			{
+			    link_visited[i].set(NOT_RESERVED,NOT_RESERVED);
+			    link_tvisited[i].set(NOT_RESERVED,NOT_RESERVED);
+			}
 		    }
 		}
 
@@ -399,11 +402,11 @@ int DiSR::process(TPacket& p)
 
 		// all other directions tvisitred during flooding
 		// should be released
-		// TODO: deprecated ? this->release_flooding_paths();
+		// TODO: deprecated ? this->release_forwarding_paths();
 
 		this->setStatus(ASSIGNED);
-		cout << "[node "<< router->local_id <<  "] DiSR::process()  FORWARDING CONFIRM " << packet_segment_id << " back to " << flooding_path << endl;
-		return flooding_path;
+		cout << "[node "<< router->local_id <<  "] DiSR::process()  forwarding STARTING_SEGMENT_CONFIRM " << packet_segment_id << " back to " << forwarding_path << endl;
+		return forwarding_path;
 		
 		// return FORWARD_CONFIRM;
 	    }
@@ -421,8 +424,63 @@ int DiSR::process(TPacket& p)
 	else // the confirmation packet returned to its orginal source, all done!
 	if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
-	    cout << "[node "<<router->local_id<<"] DiSR::process()  confirmation process of segment id " << packet_segment_id <<  " ENDED !" << endl;
+	    cout << "[node "<<router->local_id<<"] DiSR::process()  STARTING_SEGMENT_CONFIRM id " << packet_segment_id <<  " ended !" << endl;
 	    setStatus(ASSIGNED);
+	    return ACTION_END_CONFIRM; 
+	}
+	assert(false);
+    }
+    /////////////////////////////////////////////////////////
+    else if (p.type == SEGMENT_CONFIRM)
+    ////////////////////////////////////////////////////////
+    {
+
+	cout << "[node "<<router->local_id << "] DiSR::process() processing SEGMENT_CONFIRM with ID " << packet_segment_id << endl;
+
+	 // locally generated segment packet confirmation, 
+	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
+	{
+	    cout << "[node "<<router->local_id << "] DiSR::process() sending locally generated SEGMENT_CONFIRM with id " << packet_segment_id << " towards " << p.dir_out << endl;
+	     // inject the packet to the appropriate link previously found by generate_segment_confirm()
+	    return p.dir_out;
+	}
+	// foreign confirm segment confirm
+	else if (  p.src_id!=router->local_id ) 
+	{
+
+	    if  ( (this->getStatus()==CANDIDATE) && (local_segment_id == packet_segment_id) )
+	    {
+
+		cout << "[node "<< router->local_id <<  "] DiSR::process()  CANDIDATE to segment id: " << local_segment_id << " has been ASSIGNED!" << endl;
+
+		assert(this->visited); // ....of course!
+
+		// the incoming link and forward path change from tvsited to visited with the segment id
+		this->link_visited[p.dir_in] = packet_segment_id;
+		this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
+
+		this->link_visited[forwarding_path] = packet_segment_id;
+		this->link_tvisited[forwarding_path].set(NOT_RESERVED,NOT_RESERVED);
+
+		cout << "[node "<< router->local_id <<  "] DiSR::process()  forwarding  SEGMENT_CONFIRM " << packet_segment_id << " back to " << forwarding_path << endl;
+		return forwarding_path;
+		
+	    }
+	    else 
+	    {
+		cout << "[node "<<router->local_id << "] DiSR::process()  CRITICAL, receving SEGMENT_CONFIRM with inconsistent environment:" << endl;
+		cout << "[node "<<router->local_id << "] DiSR::process()  local segid = " << local_segment_id << " , packet id = " << packet_segment_id << ", ";
+		print_status();
+		assert(false);
+		return ACTION_SKIP;
+	    }
+	    
+	    
+	}
+	else // the confirmation packet returned to its orginal source, all done!
+	if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
+	{
+	    cout << "[node "<<router->local_id<<"] DiSR::process()  SEGMENT_CONFIRM id " << packet_segment_id <<  " ended !" << endl;
 	    return ACTION_END_CONFIRM; 
 	}
 	assert(false);
@@ -432,40 +490,6 @@ int DiSR::process(TPacket& p)
 }
 
 
-/* TODO: check if deprecated with the priority-based cancel
- *
-// updates the LED data and send release packets along the previuously
-// flooded directions
-void DiSR::release_flooding_paths()
-{
-	cout << "[node "<<router->local_id<<"] DiSR::release_flooding_paths() ready to inject SEGMENT_CANCEL" << endl;
-	
-	const TSegmentId freeid = TSegmentId(NOT_RESERVED,NOT_RESERVED);
-	/////////////////////////////////////////////////////////////////////////////////
-	//must search for starting segment
-
-	for (int i = 0;i<DIRECTIONS;i++)
-	{
-	    if (link_tvisited[i]==this->segID)
-	    {
-
-		link_tvisited[i] = freeid;
-
-		// prepare the packet
-		TPacket packet;
-		packet.id = segment_id;
-		packet.src_id = router->local_id;
-		packet.type = SEGMENT_CANCEL;
-		packet.dir_in = DIRECTION_LOCAL;
-		packet.dir_out = i;
-		packet.hop_no = 0;
-
-		cout << "[node "<<router->local_id<<"] DiSR::release_flooding_paths() injecting SEGMENT_CANCEL " << segment_id << " towards direction " << i << endl;
-		router->inject_to_network(packet);
-	    }
-	}
-}
-*/
 
 int DiSR::next_free_link()
 {
@@ -476,6 +500,11 @@ int DiSR::next_free_link()
 	if ( (link_visited[current_link].isFree()) && (link_tvisited[current_link].isFree()))
 	{
 	    cout << "[node "<<router->local_id<<"] DiSR::next_free_link() found free link " << current_link <<  endl;
+
+	    if (this->router->local_id==2)
+	    {
+		cout << "\n **************** NODE 2 *********** returning next free link " << endl;
+	    }
 	    return current_link++;
 	}
 	current_link++;
@@ -614,7 +643,8 @@ void DiSR::start_investigate_links()
 	if (candidate_link!=NOT_VALID)
 	{
 	    this->setStatus(READY_SEARCHING);
-	    TSegmentId segment_id(router->local_id,candidate_link);
+	    TSegmentId segment_id;
+	    segment_id.set(router->local_id,candidate_link);
 	    // mark the link and the node with id of segment request
 	    link_tvisited[candidate_link] = segment_id;
 	    this->setStatus(ACTIVE_SEARCHING);
@@ -692,7 +722,8 @@ void DiSR::bootstrap_node()
 
 	if (candidate_link!=NOT_VALID)
 	{
-	    TSegmentId segment_id(router->local_id,candidate_link);
+	    TSegmentId segment_id;
+	    segment_id.set(router->local_id,candidate_link);
 	    // mark the link and the node with id of segment request
 	    link_tvisited[candidate_link] = segment_id;
 	    visited = true;
@@ -755,10 +786,9 @@ void DiSR::generate_segment_confirm(TPacket& p)
 
 void DiSR::reset()
 {
-    const TSegmentId freeid = TSegmentId(NOT_RESERVED,NOT_RESERVED);
     visited= false;
     tvisited= false;
-    segID = freeid;
+    segID.set(NOT_RESERVED,NOT_RESERVED);
     starting = false;
     terminal = false;
     subnet = NOT_RESERVED;
@@ -769,8 +799,8 @@ void DiSR::reset()
 	// note: not valid links shouldnt' be set as free
 	if (link_visited[i].isValid())
 	{
-	    link_visited[i] = freeid;
-	    link_tvisited[i] = freeid;
+	    link_visited[i].set(NOT_RESERVED,NOT_RESERVED);
+	    link_tvisited[i].set(NOT_RESERVED,NOT_RESERVED);
 	}
     }
 
@@ -788,8 +818,10 @@ void DiSR::reset()
 
 void DiSR::invalidate(int d)
 {
-    link_visited[d] = TSegmentId(NOT_VALID,NOT_VALID);
-    link_tvisited[d] = TSegmentId(NOT_VALID,NOT_VALID);
+    if (this->router->local_id==2)
+	cout << "\n *************** setting NOT_VALID along dir " << d << endl;
+    link_visited[d].set(NOT_VALID,NOT_VALID);
+    link_tvisited[d].set(NOT_VALID,NOT_VALID);
 
 }
 
