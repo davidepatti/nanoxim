@@ -122,7 +122,7 @@ void TRouter::txProcess()
 
 		    // TODO: Update DiSR LED - here or in actual forwading ???
 		    this->disr.setLinks(TVISITED,directions,packet.id);
-		    this->disr.forwarding_path = packet.dir_in;
+		    //this->disr.forwarding_path = packet.dir_in;
 
 		}
 		else if (process_out[i]==ACTION_SKIP)
@@ -166,7 +166,7 @@ void TRouter::txProcess()
 		}
 		else if (process_out[i]==NOT_VALID)
 		{
-		  cout << "[node " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[nodd " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		    assert(false);
 		}
 		else 

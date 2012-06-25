@@ -217,7 +217,6 @@ class DiSR
   void invalidate(int);
   DiSR_status getStatus() const;
   void setLinks(int type, const vector<int>& directions,const TSegmentId& id);
-  unsigned int forwarding_path; // the direction from which a flooding request came
 
 
     private:
@@ -231,6 +230,9 @@ class DiSR
   void start_investigate_links();
   void continue_investigate_links();
 
+  void set_request_path(int);
+
+  int request_path; // the direction from which a request came
 
   // Local environment data (LED)
 
