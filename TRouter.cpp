@@ -135,16 +135,6 @@ void TRouter::txProcess()
 		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_DISCARD [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		    //TODO: take some action in reservation phase ?
 		}
-		/*
-		   else  if (process_out==FORWARD_CONFIRM)
-		   {
-		   cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, adding reservation i="<<i<<",o="<<disr.forwarding_path<<endl;
-		   if (reservation_table.isAvailable(this->disr.forwarding_path))
-		   reservation_table.reserve(i, this->disr.forwarding_path);
-		   else
-		   cout << "[node " << local_id << "]:txProcess FORWARD_CONFIRM, CRITICAL: flooding path "<<disr.forwarding_path<< " not available!" << endl;
-		   }
-		 */
 		else  if (process_out[i]==ACTION_END_CONFIRM)
 		{
 		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_END_CONFIRM [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
@@ -166,8 +156,18 @@ void TRouter::txProcess()
 		}
 		else if (process_out[i]==NOT_VALID)
 		{
-		  cout << "[nodd " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		    assert(false);
+		}
+		else if (process_out[i]==ACTION_CANCEL_REQUEST)
+		{
+		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_CANCEL_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  // Similar to confirmation packet, a cancel packet has been injected in the local buffer that will be processed on next cycle
+		  process_out[DIRECTION_LOCAL] = ACTION_SKIP;
+		}
+		else  if (process_out[i]==ACTION_END_CANCEL)
+		{
+		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_END_CANCEL [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		}
 		else 
 		{
@@ -239,19 +239,6 @@ void TRouter::txProcess()
 		  cout << "[node " << local_id << "] skipping processing from dir " << i << endl;
 		  // skip packet processing to next cycle
 	      }
-	      /*
-		 else  if (process_out==FORWARD_CONFIRM)// USELESS ??!?!?
-		 {
-		 int o = reservation_table.getOutputPort(i);
-	      // DEBUG
-	      if (o != NOT_RESERVED)
-	      {
-	      }
-	      else
-	      {
-	      cout << "****DEBUG***** " << " node " << local_id << " CRITICAL: no reservation for input  " << i << endl;
-	      }
-	      }*/
 	      else  if (process_out[i]==ACTION_CONFIRM)
 	      {
 		  // - The received packet will issue a confirmation phase
@@ -272,10 +259,35 @@ void TRouter::txProcess()
 		  // just trash the packet 
 		  buffer[i].Pop();
 		  /*
-		  cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
-		  */
+		     cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
+		   */
 	      }
-	      /// single dest ////////////////////////////////
+	      else if (process_out[i]==ACTION_CANCEL_REQUEST)
+	      {
+		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_CANCEL_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
+		  buffer[i].Pop();
+	      }
+	      else if (process_out[i] == ACTION_END_CANCEL)
+	      {
+		  // just trash the packet 
+		  buffer[i].Pop();
+		  /*
+		     cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
+		   */
+	      }
+	      else if (process_out[i]==NOT_VALID)
+	      {
+		  // Case 1: 
+		  // this also happens when a confirmation event thrashes the
+		  // received packet on a given direction D in order to
+		  // inject a CONFIRM packet from the local direction towards D. The buffer[DIRECTION_LOCAL] is found not empty
+		  // but the associated process_out remains NOT_VALID
+		  cout << "[node " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  assert(false);
+	      }
+
+	      /// single destination, no action ////////////////////////////////
 	      else if (process_out[i]>=0 && process_out[i]<=4) 
 	      {
 		  int o = reservation_table.getOutputPort(i);
@@ -292,13 +304,16 @@ void TRouter::txProcess()
 			  buffer[i].Pop();
 
 			  // DEBUG
-			  //  cout << "****DEBUG***** " << " node " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
+			  cout << "**DEBUG** " << "@node " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
 
 			  // TODO: always release ?
 			  reservation_table.release(o);
 
 			  // Update stats
 		      }
+		      else
+			  cout << "**DEBUG** " << "@node " << local_id << " ABP not ready while removing buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
+
 		  }
 		  else
 		  {
@@ -307,21 +322,11 @@ void TRouter::txProcess()
 
 		  ///////////////////////////////////////////////
 	      }
-		else if (process_out[i]==NOT_VALID)
-		{
-		  // Case 1: 
-		  // this also happens when a confirmation event thrashes the
-		  // received packet on a given direction D in order to
-		  // inject a CONFIRM packet from the local direction towards D. The buffer[DIRECTION_LOCAL] is found not empty
-		  // but the associated process_out remains NOT_VALID
-		  cout << "[node " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
-		    assert(false);
-		}
-		else 
-		{
+	      else 
+	      {
 		  cout << "[node " << local_id << "]: CRITICAL, UNSUPPORTED process("<<i<<") =  " << process_out[i] << " [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
-		    assert(false);
-		}
+		  assert(false);
+	      }
 	  } // if buffer not empty
       } // for directions
     } // else read

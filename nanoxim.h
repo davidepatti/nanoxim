@@ -28,6 +28,7 @@ using namespace std;
 #define ACTION_END_CONFIRM 104
 #define ACTION_CONFIRM 105
 #define ACTION_CANCEL_REQUEST 106
+#define ACTION_END_CANCEL 107
 
 // Generic not reserved resource
 #define NOT_RESERVED          -2
@@ -170,6 +171,10 @@ public:
 	{
 	    return ( (segid.node==node) && (segid.link==link));
 	}
+	inline bool operator < (const TSegmentId& segid) const
+	{
+	    return ( node<segid.node );
+	}
 
 	inline bool isFree() const
 	{
@@ -227,6 +232,7 @@ class DiSR
   void bootstrap_node();
   void setStatus(const DiSR_status&);
   void generate_segment_confirm(TPacket&);
+  void generate_segment_cancel(TPacket&);
   void start_investigate_links();
   void continue_investigate_links();
 
