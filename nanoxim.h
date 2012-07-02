@@ -29,6 +29,7 @@ using namespace std;
 #define ACTION_CONFIRM 105
 #define ACTION_CANCEL_REQUEST 106
 #define ACTION_END_CANCEL 107
+#define ACTION_RETRY_REQUEST 108
 
 // Generic not reserved resource
 #define NOT_RESERVED          -2
