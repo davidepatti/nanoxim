@@ -204,8 +204,11 @@ int DiSR::process(TPacket& p)
     {
 	cout << "[node "<<router->local_id << "] DiSR::process() found SEGMENT_REQUEST with ID " << packet_segment_id << endl;
 
-	 // locally generated 
-	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
+	 // locally generated
+	//if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
+	// present in the local buffer, not necessarily locally
+	// generate (e.g. when occurring ACTION_RETRY_REQUEST)
+	if ( p.dir_in==DIRECTION_LOCAL )
 	{
 	     // just inject to the link found by next_free_link() 
 	    return p.dir_out;
@@ -527,69 +530,83 @@ int DiSR::process(TPacket& p)
 	     // inject the packet to the appropriate link previously found by generate_segment_cancel()
 	    return p.dir_out;
 	}
-	// not-local cancel segment packet
-	else if (  p.src_id!=router->local_id ) 
+	// not-locally generated cancel segment packet
+	else 
 	{
-	    // TODO: unify the two cased below
-	    // the cancel packet returned to segment request initiator, all done!
-	    if ( (packet_segment_id.getNode()==router->local_id) )
+	    // TODO: removed asserts, only true if the link was not
+	    // the initiator of the request
+	    //assert(this->getStatus()==CANDIDATE);
+	    //assert(local_segment_id == packet_segment_id);
+	    //assert(this->tvisited);
+
+	    //search for a suitable link
+	    int freedirection = next_free_link();
+
+	    if (freedirection!=NOT_VALID)
 	    {
+		// the choosen direction becomes tvisited
+		link_tvisited[freedirection] = packet_segment_id;
+
 		// the incoming link changes from tvsited to free 
 		this->link_visited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 
-		// reset free link search pointer, since LED have been
-		// updated
-		this->current_link = DIRECTION_NORTH;
+		// prepare the new request packet
+		TPacket packet;
+		packet.id = packet_segment_id;
+		packet.src_id = p.src_id;
+		packet.type = SEGMENT_REQUEST;
+		packet.dir_in = DIRECTION_LOCAL;
+		packet.dir_out = freedirection;
+		packet.hop_no = p.hop_no;
 
-		cout << "[node "<<router->local_id<<"] DiSR::process()  SEGMENT_CANCEL id " << packet_segment_id <<  " ended !" << endl;
-		assert(this->visited); // the request iniator was certainly a visited node...
-		return ACTION_END_CANCEL;
+		cout << "[node "<< router->local_id <<  "] DiSR::process() Retrying SEGMENT_REQUEST " << this->segID << " along " << freedirection <<endl;
+
+		router->inject_to_network(packet);
+		return ACTION_RETRY_REQUEST;
 	    }
 	    else
-	    // any candidate node must become assigned and forward
-	    if  (  (local_segment_id == packet_segment_id) )
 	    {
-		assert(this->getStatus()==CANDIDATE);
-		assert(local_segment_id == packet_segment_id);
-		cout << "[node "<< router->local_id <<  "] DiSR::process()  CANDIDATE to segment id: " << local_segment_id << " has been **CANCELLED!**" << endl;
-		setStatus(FREE);
-
-		// node status changes from tvisited to free
-		this->tvisited = false;
-		this->visited = false;
-
-		// the incoming link and forward path change from tvsited to free 
+		// the incoming link becomes free 
 		this->link_visited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 
-		this->link_visited[this->request_path].set(NOT_RESERVED,NOT_RESERVED);
-		this->link_tvisited[this->request_path].set(NOT_RESERVED,NOT_RESERVED);
+		// if the initial request started from here, no need
+		// to forward the segment cancel 
+		if (this->router->local_id == packet_segment_id.getNode() )
+		{
+		    cout << "[node "<< router->local_id <<  "] DiSR::process(), no more links to investigate on initiator, ending request " << packet_segment_id  << endl;
+		    return ACTION_END_CANCEL;
+		}
+		else
+		{
+		    // even the request path should be cleared
+		    this->link_visited[this->request_path].set(NOT_RESERVED,NOT_RESERVED);
+		    this->link_tvisited[this->request_path].set(NOT_RESERVED,NOT_RESERVED);
 
+		    // node status changes from tvisited to free
+		    this->tvisited = false;
+		    this->visited = false;
+		    this->setStatus(FREE);
+		    cout << "[node "<< router->local_id <<  "] DiSR::process(), no more links to investigate, forwarding SEGMENT_CANCEL " << packet_segment_id << " back to " << this->request_path << endl;
+		    return this->request_path;
+		}
+
+
+		// TODO: should we do this , when ?
 		// reset free link search pointer, since LED have been
 		// updated
 		this->current_link = DIRECTION_NORTH;
 
-
-		cout << "[node "<< router->local_id <<  "] DiSR::process()  forwarding  SEGMENT_CANCEL " << packet_segment_id << " back to " << this->request_path << endl;
 		//cout << "[node "<< router->local_id <<  "] DiSR::process()  freeing request path " << this->request_path << " and incoming dir " << p.dir_in << endl;
 		//cout << "[node "<< router->local_id <<  "] DiSR::process()  current_link = " << this->current_link << endl;
-		return this->request_path;
 		
 	    }
-	    else 
-	    {
-		cout << "[node "<<router->local_id << "] DiSR::process()  CRITICAL, receving SEGMENT_CANCEL with inconsistent environment:" << endl;
-		cout << "[node "<<router->local_id << "] DiSR::process()  local segid = " << local_segment_id << " , packet id = " << packet_segment_id << ", ";
-		print_status();
-		assert(false);
-		return ACTION_SKIP;
-	    }
 	    
+	} // locally/not locally
 	    
-	}
-	assert(false);
-    } // SEGMENT_CONFIRM
+    }
+    assert(false);
     return NOT_VALID;
 }
 
@@ -720,8 +737,8 @@ void DiSR::update_status()
 	timeout--;
 	if (timeout>0)
 	{
-	    if (has_free_link()) 
-		continue_investigate_links();
+
+	    //if (has_free_link()) continue_investigate_links();
 
 	    if (timeout%50==0)
 		cout << "[node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE remaining timeout: " << timeout << endl;

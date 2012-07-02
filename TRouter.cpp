@@ -169,6 +169,12 @@ void TRouter::txProcess()
 		{
 		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_END_CANCEL [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		}
+		else  if (process_out[i]==ACTION_RETRY_REQUEST)
+		{
+		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_RETRY_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  // a new packet has been injected in the local buffer that will be processed on next cycle
+		  process_out[DIRECTION_LOCAL] = ACTION_SKIP;
+		}
 		else 
 		{
 		  cout << "[node " << local_id << "]: CRITICAL, UNSUPPORTED process("<<i<<") =  " << process_out[i] << " [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
@@ -225,14 +231,13 @@ void TRouter::txProcess()
 		  }
 		  // Anyway, during flooding phase the packet should be removed from buffer, since the reserved output destinations mean
 		  // that those outputs have been flooded
-		  buffer[i].Pop();
+		  flush_buffer(i);
 
 	      }
 	      else if (process_out[i] == ACTION_DISCARD)
 	      {
-		  cout << "[node " << local_id << "] discarding packet from dir " << i << endl;
 		  // just trash the packet 
-		  buffer[i].Pop();
+		  flush_buffer(i);
 	      }
 	      else if (process_out[i] == ACTION_SKIP)
 	      {
@@ -250,14 +255,13 @@ void TRouter::txProcess()
 		  // this cycle
 		  // - Must set the incoming link id with the proper segment id
 
-		  cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
-		  buffer[i].Pop();
+		  flush_buffer(i);
 		  //		  process_out[i] = NOT_VALID;
 	      }
 	      else if (process_out[i] == ACTION_END_CONFIRM)
 	      {
 		  // just trash the packet 
-		  buffer[i].Pop();
+		  flush_buffer(i);
 		  /*
 		     cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
 		   */
@@ -265,13 +269,12 @@ void TRouter::txProcess()
 	      else if (process_out[i]==ACTION_CANCEL_REQUEST)
 	      {
 		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_CANCEL_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
-		  cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
-		  buffer[i].Pop();
+		  flush_buffer(i);
 	      }
 	      else if (process_out[i] == ACTION_END_CANCEL)
 	      {
 		  // just trash the packet 
-		  buffer[i].Pop();
+		  flush_buffer(i);
 		  /*
 		     cout << "[node " << local_id << "] thrashing confirmed request from dir " << i << endl;
 		   */
@@ -286,6 +289,11 @@ void TRouter::txProcess()
 		  cout << "[node " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  assert(false);
 	      }
+	    else  if (process_out[i]==ACTION_RETRY_REQUEST)
+	    {
+	      flush_buffer(i);
+	      cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_RETRY_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+	    }
 
 	      /// single destination, no action ////////////////////////////////
 	      else if (process_out[i]>=0 && process_out[i]<=4) 
@@ -301,7 +309,7 @@ void TRouter::txProcess()
 			  packet_tx[o].write(packet);
 			  current_level_tx[o] = 1 - current_level_tx[o];
 			  req_tx[o].write(current_level_tx[o]);
-			  buffer[i].Pop();
+			  flush_buffer(i);
 
 			  // DEBUG
 			  cout << "**DEBUG** " << "@node " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
@@ -389,6 +397,12 @@ void TRouter::inject_to_network(const TPacket& p)
     }
     else
 	cout << "["<<local_id<<"]:cant Inject packet (buffer full)" << endl;
+}
+
+void TRouter::flush_buffer(int d)
+{
+    cout << "[node " << local_id << "] flushing buffer direction " << d << endl;
+    this->buffer[d].Pop();
 }
 
 

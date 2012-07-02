@@ -49,6 +49,7 @@ SC_MODULE(TRouter)
   void               txProcess();        // The transmitting process
   void               configure(const int _id, const unsigned int _max_buffer_size);
   void inject_to_network(const TPacket& p);
+  void flush_buffer(int);
 
   // Constructor
 
