@@ -23,28 +23,28 @@ void showHelp(char selfname[])
 void showConfig()
 {
   cout << "Using the following configuration: " << endl;
-  cout << "- mesh_dim_x = " << TGlobalParams::mesh_dim_x << endl;
-  cout << "- mesh_dim_y = " << TGlobalParams::mesh_dim_y << endl;
-  cout << "- buffer_depth = " << TGlobalParams::buffer_depth << endl;
-  cout << "- routing_algorithm = " << TGlobalParams::routing_algorithm << endl;
-  cout << "- simulation_time = " << TGlobalParams::simulation_time << endl;
+  cout << "- mesh_dim_x = " << GlobalParams::mesh_dim_x << endl;
+  cout << "- mesh_dim_y = " << GlobalParams::mesh_dim_y << endl;
+  cout << "- buffer_depth = " << GlobalParams::buffer_depth << endl;
+  cout << "- routing_algorithm = " << GlobalParams::routing_algorithm << endl;
+  cout << "- simulation_time = " << GlobalParams::simulation_time << endl;
 }
 
 //---------------------------------------------------------------------------
 
 void checkInputParameters()
 {
-  if (TGlobalParams::mesh_dim_x <= 1) {
+  if (GlobalParams::mesh_dim_x <= 1) {
     cerr << "Error: dimx must be greater than 1" << endl;
     exit(1);
   }
 
-  if (TGlobalParams::mesh_dim_y <= 1) {
+  if (GlobalParams::mesh_dim_y <= 1) {
     cerr << "Error: dimy must be greater than 1" << endl;
     exit(1);
   }
 
-  if (TGlobalParams::buffer_depth < 1)
+  if (GlobalParams::buffer_depth < 1)
   {
     cerr << "Error: buffer must be >= 1" << endl;
     exit(1);
@@ -68,23 +68,23 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	exit(0);
       } 
       else if (!strcmp(arg_vet[i], "-verbose"))
-	TGlobalParams::verbose_mode = atoi(arg_vet[++i]);
+	GlobalParams::verbose_mode = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-dimx"))
-	TGlobalParams::mesh_dim_x = atoi(arg_vet[++i]);
+	GlobalParams::mesh_dim_x = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-dimy"))
-	TGlobalParams::mesh_dim_y = atoi(arg_vet[++i]);
+	GlobalParams::mesh_dim_y = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-buffer"))
-	TGlobalParams::buffer_depth = atoi(arg_vet[++i]);
+	GlobalParams::buffer_depth = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-routing"))
       {
 	char *routing = arg_vet[++i];
         if (!strcmp(routing, "xy")) 
-	  TGlobalParams::routing_algorithm = ROUTING_XY;
+	  GlobalParams::routing_algorithm = ROUTING_XY;
       }
       else if (!strcmp(arg_vet[i], "-sim"))
-	TGlobalParams::simulation_time = atoi(arg_vet[++i]);
+	GlobalParams::simulation_time = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-disr")) 
-	  TGlobalParams::disr = 1;
+	  GlobalParams::disr = 1;
       else 
       {
 	cerr << "Error: Invalid option: " << arg_vet[i] << endl;

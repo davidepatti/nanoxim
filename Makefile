@@ -8,7 +8,8 @@ CFLAGS = $(OPT) $(OTHER)
 
 MODULE = nanoxim
 SRCS = TNet.cpp TRouter.cpp TProcessingElement.cpp TBuffer.cpp \
-	TReservationTable.cpp CmdLineParser.cpp DiSR.cpp main.cpp
+	TReservationTable.cpp CmdLineParser.cpp DiSR.cpp \
+	GlobalStats.cpp Stats.cpp main.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 include ./Makefile.defs

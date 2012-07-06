@@ -26,7 +26,7 @@ void TProcessingElement::rxProcess()
     if(req_rx.read()==1-current_level_rx)
     {
       TPacket packet_tmp = packet_rx.read();
-      if(TGlobalParams::verbose_mode > VERBOSE_OFF)
+      if(GlobalParams::verbose_mode > VERBOSE_OFF)
       {
         cout << sc_simulation_time() << ": ProcessingElement[" << local_id << "] RECEIVING " << packet_tmp << endl;
       }
@@ -64,7 +64,7 @@ void TProcessingElement::txProcess()
 	    {
 		cout << "[PE " << local_id <<"] can send and has not emtpy queue" << endl;
 		TPacket packet = nextPacket();                  // Generate a new packet
-		if(TGlobalParams::verbose_mode > VERBOSE_OFF)
+		if(GlobalParams::verbose_mode > VERBOSE_OFF)
 		{
 		    cout << sc_time_stamp().to_double()/1000 << ": ProcessingElement[" << local_id << "] SENDING " << packet << endl;
 		}
@@ -109,7 +109,7 @@ bool TProcessingElement::canShot(TPacket& packet)
     // TODO: add code here to choose PE behaviour
     int behaviour;
 
-    behaviour = TGlobalParams::disr;
+    behaviour = GlobalParams::disr;
     // DiSR, current testing approch:
     // - default is an XY routing where only node 0 sends packets
     // to a random destination
@@ -149,7 +149,7 @@ TPacket TProcessingElement::trafficRandom()
 
   //cout << "\n " << sc_time_stamp().to_double()/1000 << " PE " << local_id << " rnd = " << rnd << endl;
 
-  int max_id = (TGlobalParams::mesh_dim_x * TGlobalParams::mesh_dim_y)-1;
+  int max_id = (GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y)-1;
 
   // Random destination distribution
   do
@@ -181,8 +181,8 @@ void TProcessingElement::fixRanges(const TCoord src, TCoord& dst)
   // Fix ranges
   if(dst.x<0) dst.x=0;
   if(dst.y<0) dst.y=0;
-  if(dst.x>=TGlobalParams::mesh_dim_x) dst.x=TGlobalParams::mesh_dim_x-1;
-  if(dst.y>=TGlobalParams::mesh_dim_y) dst.y=TGlobalParams::mesh_dim_y-1;
+  if(dst.x>=GlobalParams::mesh_dim_x) dst.x=GlobalParams::mesh_dim_x-1;
+  if(dst.y>=GlobalParams::mesh_dim_y) dst.y=GlobalParams::mesh_dim_y-1;
 }
 
 //---------------------------------------------------------------------------

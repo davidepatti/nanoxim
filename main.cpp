@@ -25,6 +25,7 @@
 #include "nanoxim.h"
 #include "TNet.h"
 #include "CmdLineParser.h"
+#include "GlobalStats.h"
 
 
 using namespace std;
@@ -32,14 +33,14 @@ using namespace std;
 //---------------------------------------------------------------------------
 
 // Initialize global configuration parameters (can be overridden with command-line arguments)
-int   TGlobalParams::mesh_dim_x                       = DEFAULT_MESH_DIM_X;
-int   TGlobalParams::mesh_dim_y                       = DEFAULT_MESH_DIM_Y;
-int   TGlobalParams::buffer_depth                     = DEFAULT_BUFFER_DEPTH;
-int   TGlobalParams::routing_algorithm                = ROUTING_XY;
-int   TGlobalParams::verbose_mode		      = DEFAULT_VERBOSE_MODE;
-int   TGlobalParams::simulation_time		      = DEFAULT_SIMULATION_TIME;
-int   TGlobalParams::rnd_generator_seed               = 0;
-int   TGlobalParams::disr               = DEFAULT_DISR_SETUP;
+int   GlobalParams::mesh_dim_x                       = DEFAULT_MESH_DIM_X;
+int   GlobalParams::mesh_dim_y                       = DEFAULT_MESH_DIM_Y;
+int   GlobalParams::buffer_depth                     = DEFAULT_BUFFER_DEPTH;
+int   GlobalParams::routing_algorithm                = ROUTING_XY;
+int   GlobalParams::verbose_mode		      = DEFAULT_VERBOSE_MODE;
+int   GlobalParams::simulation_time		      = DEFAULT_SIMULATION_TIME;
+int   GlobalParams::rnd_generator_seed               = 0;
+int   GlobalParams::disr               = DEFAULT_DISR_SETUP;
 
 //---------------------------------------------------------------------------
 
@@ -65,16 +66,19 @@ int sc_main(int arg_num, char* arg_vet[])
   // Reset the chip and run the simulation
   reset.write(1);
   cout << "Reset...";
-  srand(TGlobalParams::rnd_generator_seed); // time(NULL));
+  srand(GlobalParams::rnd_generator_seed); // time(NULL));
   sc_start(DEFAULT_RESET_TIME, SC_NS);
   reset.write(0);
-  cout << " done! Now running for " << TGlobalParams::simulation_time << " cycles..." << endl;
-  sc_start(TGlobalParams::simulation_time, SC_NS);
+  cout << " done! Now running for " << GlobalParams::simulation_time << " cycles..." << endl;
+  sc_start(GlobalParams::simulation_time, SC_NS);
 
   // Close the simulation
   cout << "network simulation completed." << endl;
   cout << " ( " << sc_time_stamp().to_double()/1000 << " cycles executed)" << endl;
 
+  // Show statistics
+  GlobalStats gs(n);
+  gs.showStats(std::cout);
 
   return 0;
 
