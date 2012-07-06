@@ -12,6 +12,7 @@
 #include "nanoxim.h"
 #include "TBuffer.h"
 #include "TReservationTable.h"
+#include "Stats.h"
 
 
 SC_MODULE(TRouter)
@@ -43,6 +44,7 @@ SC_MODULE(TRouter)
   TReservationTable  reservation_table;               // Switch reservation table
   DiSR disr;						// DiSR component implementing algorithm locally
   int                start_from_port;                 // Port from which to start the reservation cycle
+  Stats stats;
   // Functions
 
   void               rxProcess();        // The receiving process

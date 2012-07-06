@@ -658,7 +658,7 @@ int DiSR::has_free_link() const
     }
     cout << "no link found! " << endl;
 
-    return NOT_VALID;
+    return false;
 }
 
 void DiSR::print_status() const
@@ -709,9 +709,11 @@ void DiSR::update_status()
     if (this->status==BOOTSTRAP)
 	bootstrap_node();
 
-    if (1)
-	if (this->status==ASSIGNED && has_free_link() )
-	    start_investigate_links();
+    if (this->status==ASSIGNED && has_free_link() )
+    {
+	cout << "[node "<<router->local_id<<"] DiSR::update_status(), can start_investigate_links() ! " << endl;
+	start_investigate_links();
+    }
 
     if (this->status==CANDIDATE_STARTING)
     {

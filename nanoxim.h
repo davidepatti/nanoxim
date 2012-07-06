@@ -80,8 +80,8 @@ enum DiSR_status { BOOTSTRAP,
 };
 
 //---------------------------------------------------------------------------
-// TGlobalParams -- used to forward configuration to every sub-block
-struct TGlobalParams
+// GlobalParams -- used to forward configuration to every sub-block
+struct GlobalParams
 {
   static int verbose_mode;
   static int mesh_dim_x;
@@ -287,7 +287,7 @@ struct TPacket
 //---------------------------------------------------------------------------
 inline ostream& operator << (ostream& os, const TPacket& packet)
 {
-  if (TGlobalParams::verbose_mode==VERBOSE_HIGH)
+  if (GlobalParams::verbose_mode==VERBOSE_HIGH)
   {
 
       os << "### PACKET ###" << endl;
@@ -359,11 +359,11 @@ inline TCoord id2Coord(int id)
 {
   TCoord coord;
 
-  coord.x = id % TGlobalParams::mesh_dim_x;
-  coord.y = id / TGlobalParams::mesh_dim_x;
+  coord.x = id % GlobalParams::mesh_dim_x;
+  coord.y = id / GlobalParams::mesh_dim_x;
 
-  assert(coord.x < TGlobalParams::mesh_dim_x);
-  assert(coord.y < TGlobalParams::mesh_dim_y);
+  assert(coord.x < GlobalParams::mesh_dim_x);
+  assert(coord.y < GlobalParams::mesh_dim_y);
 
   return coord;
 }
@@ -371,9 +371,9 @@ inline TCoord id2Coord(int id)
 //---------------------------------------------------------------------------
 inline int coord2Id(const TCoord& coord) 
 {
-  int id = (coord.y * TGlobalParams::mesh_dim_x) + coord.x;
+  int id = (coord.y * GlobalParams::mesh_dim_x) + coord.x;
 
-  assert(id < TGlobalParams::mesh_dim_x * TGlobalParams::mesh_dim_y);
+  assert(id < GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y);
 
   return id;
 }

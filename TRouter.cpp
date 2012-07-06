@@ -4,6 +4,7 @@
 
 *****************************************************************************/
 #include "TRouter.h"
+#include "Stats.h"
 
 //---------------------------------------------------------------------------
 
@@ -25,7 +26,7 @@ void TRouter::rxProcess()
 	// event of actually receiving a new packet. For example:
 	// - bootstrapping node for first segment request
 	// - TODO: updating timeouts
-	if (TGlobalParams::disr) disr.update_status();
+	if (GlobalParams::disr) disr.update_status();
 	//
 	// For each channel decide if a new packet can be accepted
 	//
@@ -43,7 +44,7 @@ void TRouter::rxProcess()
 		//cout << "[node " << local_id <<"] rxProcess() can receive from dir " << i << " with non-empty buffer" << endl;
 		TPacket received_packet = packet_rx[i].read();
 
-		if(TGlobalParams::verbose_mode > VERBOSE_OFF)
+		if(GlobalParams::verbose_mode > VERBOSE_OFF)
 		{
 		    cout << sc_time_stamp().to_double()/1000 << ": Router[" << local_id <<"], Input[" << i << "], Received packet: " << received_packet << endl;
 		}
@@ -72,7 +73,7 @@ void TRouter::txProcess()
 	  current_level_tx[i] = 0;
 	}
 	// DiSR
-      if (TGlobalParams::disr) this->disr.reset();
+      if (GlobalParams::disr) this->disr.reset();
     }
   else
     {
@@ -348,7 +349,7 @@ vector<int> TRouter::routingFunction(const TPacket& p)
   TCoord src_coord = id2Coord(p.src_id);
   TCoord dst_coord = id2Coord(p.dst_id);
 
-  switch (TGlobalParams::routing_algorithm)
+  switch (GlobalParams::routing_algorithm)
     {
     case ROUTING_XY:
       return routingXY(position, dst_coord);
@@ -369,7 +370,7 @@ int TRouter::process(TPacket& p)
 
     // DiSR setup traffic management
     // TODO: make it in a better way...
-    if (TGlobalParams::disr)
+    if (GlobalParams::disr)
     {
 	return this->disr.process(p);
     }
@@ -466,11 +467,11 @@ int TRouter::getNeighborId(int _id, int direction) const
 	    my_coord.y--;
 	    break;
 	case DIRECTION_SOUTH:
-	    if (my_coord.y==TGlobalParams::mesh_dim_y-1) return NOT_VALID;
+	    if (my_coord.y==GlobalParams::mesh_dim_y-1) return NOT_VALID;
 	    my_coord.y++;
 	    break;
 	case DIRECTION_EAST:
-	    if (my_coord.x==TGlobalParams::mesh_dim_x-1) return NOT_VALID;
+	    if (my_coord.x==GlobalParams::mesh_dim_x-1) return NOT_VALID;
 	    my_coord.x++;
 	    break;
 	case DIRECTION_WEST:
