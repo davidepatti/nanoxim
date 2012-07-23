@@ -223,6 +223,8 @@ class DiSR
   void invalidate(int);
   DiSR_status getStatus() const;
   void setLinks(int type, const vector<int>& directions,const TSegmentId& id);
+  TSegmentId getLocalSegmentID() const;
+  TSegmentId getLinkSegmentID(int d) const;
 
 
     private:

@@ -980,3 +980,13 @@ bool DiSR::sanity_check()
 {
     return true;
 }
+
+TSegmentId DiSR::getLocalSegmentID() const
+{
+    return this->segID;
+}
+TSegmentId DiSR::getLinkSegmentID(int d) const
+{
+    assert(d<DIRECTIONS);
+    return this->link_visited[d];
+}

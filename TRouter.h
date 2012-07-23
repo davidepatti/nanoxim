@@ -66,6 +66,7 @@ SC_MODULE(TRouter)
     sensitive << clock.pos();
   }
 
+  int getNeighborId(int _id,int direction) const;
 
  private:
   // performs actual routing + selection
@@ -77,7 +78,6 @@ SC_MODULE(TRouter)
   // routing functions
   vector<int> routingXY(const TCoord& current, const TCoord& destination);
   int reflexDirection(int direction) const;
-  int getNeighborId(int _id,int direction) const;
 
 
 
