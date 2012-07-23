@@ -9,6 +9,7 @@
  */
 
 #include "GlobalStats.h"
+#include <cstdio>
 using namespace std;
 
 GlobalStats::GlobalStats(const TNet * _net)
@@ -231,6 +232,86 @@ double GlobalStats::getPower()
 
 void GlobalStats::showStats(std::ostream & out )
 {
+    FILE * fp;
+
+    /*
+    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
+	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
+	    net->t[x][y]->r->stats.showStats(y * GlobalParams:: mesh_dim_x + x, out, true);
+	    */
+
+    if ( (fp = fopen("out.gv","w"))!= NULL)
+    {
+	fprintf(fp,"\n digraph G { graph [layout=dot] ");
+
+	for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
+	{
+	    fprintf(fp,"\n {rank=same; ");
+	    for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
+		fprintf(fp,"n%d ; ",net->t[x][y]->r->local_id);
+	    fprintf(fp," }");
+	}
+
+	for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
+	{
+	    for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
+	    {
+		int curr_id = net->t[x][y]->r->local_id;
+
+		if (x != GlobalParams::mesh_dim_x-1)
+		{
+		    TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_EAST);
+		    fprintf(fp,"\nn%d->n%d [dir=both, label=\"%d.%d\"]",curr_id,curr_id+1,tid.getNode(),tid.getLink());
+		}
+	    }
+	}
+
+	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
+	{
+	    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
+	    {
+		int curr_id = net->t[x][y]->r->local_id;
+		int south_id = net->t[x][y]->r->getNeighborId(curr_id,DIRECTION_SOUTH);
+
+		if (y != GlobalParams::mesh_dim_y-1)
+		{
+		    TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_SOUTH);
+		    fprintf(fp,"\nn%d->n%d [dir=both, label=\"%d.%d\"]",curr_id,south_id,tid.getNode(),tid.getLink());
+		}
+	    }
+	}
+
+	fprintf(fp,"\n }");
+	fclose(fp);
+    }
+    else
+    {
+	cout << "\n Cannot write output graphwiz file...";
+    }
+
+
+    /*
+    digraph G {
+	graph [layout=dot]
+
+	{rank=same;
+	A;
+	B;
+	}
+	
+	{rank=same;
+	C;
+	D;
+	}
+
+	A -> B [dir=back, label="3.2"] 
+	A -> C [dir=both, label="2.1"]
+	C -> D [dir=forward, label="5.4"]
+	B -> D [dir=none, label="3.2"]
+
+}
+*/
+    /*
     out << "% Total received packets: " << getReceivedPackets() << endl;
     out << "% Total received flits: " << getReceivedFlits() << endl;
     out << "% Global average delay (cycles): " << getAverageDelay() <<
@@ -241,7 +322,6 @@ void GlobalStats::showStats(std::ostream & out )
     out << "% Max delay (cycles): " << getMaxDelay() << endl;
     out << "% Total energy (J): " << getPower() << endl;
 
-    /*
     if (detailed) {
 	out << endl << "detailed = [" << endl;
 	for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
