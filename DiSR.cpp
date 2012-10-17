@@ -450,6 +450,13 @@ int DiSR::process(TPacket& p)
 	{
 	    cout << "[node "<<router->local_id<<"] DiSR::process()  STARTING_SEGMENT_CONFIRM id " << packet_segment_id <<  " ended !" << endl;
 	    setStatus(ASSIGNED);
+
+	    // there's no need to set as visited, since the
+	    // initiator must be visited by definition
+
+	    // the incoming link changes from tvsited to visited with the segment id
+	    this->link_visited[p.dir_in] = packet_segment_id;
+	    this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 	    return ACTION_END_CONFIRM; 
 	}
 	assert(false);
@@ -475,6 +482,14 @@ int DiSR::process(TPacket& p)
 	    if ( (packet_segment_id.getNode()==router->local_id) )
 	    {
 		cout << "[node "<<router->local_id<<"] DiSR::process()  SEGMENT_CONFIRM id " << packet_segment_id <<  " ended !" << endl;
+
+		// there's no need to set as visited, since the
+		// initiator must be visited by definition
+
+		// the incoming link changes from tvsited to visited with the segment id
+		this->link_visited[p.dir_in] = packet_segment_id;
+		this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
+
 		setStatus(ASSIGNED);
 		return ACTION_END_CONFIRM; 
 	    }
@@ -975,6 +990,7 @@ void DiSR::invalidate(int d)
     link_tvisited[d].set(NOT_VALID,NOT_VALID);
 
 }
+
 
 bool DiSR::sanity_check()
 {
