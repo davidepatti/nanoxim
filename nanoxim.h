@@ -188,6 +188,16 @@ public:
 
 	}
 
+	inline bool isAssigned() const
+	{
+	    if ( (node==NOT_VALID) || (node==NOT_RESERVED) ||
+		    (link==NOT_VALID) || (link==NOT_RESERVED) )
+		return false;
+
+	    return true;
+		 
+	}
+
 	inline void invalidate()
 	{
 	    this->node = NOT_VALID;
