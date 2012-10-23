@@ -240,18 +240,26 @@ void GlobalStats::showStats(std::ostream & out )
 	    net->t[x][y]->r->stats.showStats(y * GlobalParams:: mesh_dim_x + x, out, true);
 	    */
 
-    if ( (fp = fopen("out.gv","w"))!= NULL)
+    if ( (fp = fopen("graph.gv","w"))!= NULL)
     {
+	// draw the network layout and declare nodes
 	fprintf(fp,"\n digraph G { graph [layout=dot] ");
 
 	for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
 	{
 	    fprintf(fp,"\n {rank=same; ");
 	    for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
-		fprintf(fp,"n%d ; ",net->t[x][y]->r->local_id);
+	    {
+		TSegmentId tid = net->t[x][y]->r->disr.getLocalSegmentID();
+		if (tid.isAssigned())
+		    fprintf(fp,"N%d [shape=circle, fixedsize=true]; ",net->t[x][y]->r->local_id);
+		else
+		    fprintf(fp,"N%d [shape=circle, fixedsize=true]; ",net->t[x][y]->r->local_id);
+	    }
 	    fprintf(fp," }");
 	}
 
+	// draw horizontal edges...
 	for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
 	{
 	    for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
@@ -261,11 +269,16 @@ void GlobalStats::showStats(std::ostream & out )
 		if (x != GlobalParams::mesh_dim_x-1)
 		{
 		    TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_EAST);
-		    fprintf(fp,"\nn%d->n%d [dir=both, label=\"%d.%d\"]",curr_id,curr_id+1,tid.getNode(),tid.getLink());
+		    if (tid.isAssigned())
+			fprintf(fp,"\nN%d->N%d [dir=both, label=\"%d.%d\"]",curr_id,curr_id+1,tid.getNode(),tid.getLink());
+		    else
+			fprintf(fp,"\nN%d->N%d [dir=none, label=\".\"]",curr_id,curr_id+1);
+
 		}
 	    }
 	}
 
+	// draw vertical edges...
 	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
 	{
 	    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
@@ -276,13 +289,18 @@ void GlobalStats::showStats(std::ostream & out )
 		if (y != GlobalParams::mesh_dim_y-1)
 		{
 		    TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_SOUTH);
-		    fprintf(fp,"\nn%d->n%d [dir=both, label=\"%d.%d\"]",curr_id,south_id,tid.getNode(),tid.getLink());
+		    if (tid.isAssigned())
+			fprintf(fp,"\nN%d->N%d [dir=both, label=\"%d.%d\"]",curr_id,south_id,tid.getNode(),tid.getLink());
+		    else
+			fprintf(fp,"\nN%d->N%d [dir=none, label=\".\"]",curr_id,south_id);
+
 		}
 	    }
 	}
 
 	fprintf(fp,"\n }");
 	fclose(fp);
+        system("dot -Tpng -o graph.png graph.gv");
     }
     else
     {

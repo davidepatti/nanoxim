@@ -66,6 +66,7 @@ using namespace std;
 #define DEFAULT_DETAILED                         false
 #define DEFAULT_RESET_TIME                        1000
 #define DEFAULT_DISR_SETUP			     0
+#define DEFAULT_DISR_BOOTSTRAP_NODE		     0
 
 // TODO by Fafa - this MUST be removed!!!
 #define MAX_STATIC_DIM 20
@@ -91,6 +92,7 @@ struct GlobalParams
   static int simulation_time;
   static int rnd_generator_seed;
   static int disr;
+  static int disr_bootstrap_node;
 };
 
 
