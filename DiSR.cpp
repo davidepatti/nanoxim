@@ -23,7 +23,7 @@ void DiSR::set_router(TRouter * r)
     // To test the model, the node 0 is always used for bootstrapping 
     // the whole algorithm
     // Whener the router pointer is updated, status must be resetted
-    if (r->local_id == 0) 
+    if (r->local_id == GlobalParams::disr_bootstrap_node) 
 	setStatus(BOOTSTRAP);
     else
 	setStatus(FREE);
@@ -35,6 +35,7 @@ DiSR_status DiSR::getStatus() const
     // sanity check of some assumed environmnet values
     switch (this->status) {
 	case BOOTSTRAP:
+	    assert(this->router->local_id == GlobalParams::disr_bootstrap_node);
 	    assert(tvisited==false);
 	    assert(visited==false);
 	    break;
@@ -976,7 +977,7 @@ void DiSR::reset()
 
     timeout = MAX_TIMEOUT;
 
-    if ((router!=NULL) && (router->local_id == 0)) 
+    if ((router!=NULL) && (router->local_id == GlobalParams::disr_bootstrap_node)) 
 	status = BOOTSTRAP;
     else
 	status = FREE;
