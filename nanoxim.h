@@ -232,7 +232,8 @@ class DiSR
   void update_status();
   int process(TPacket& p);
   void set_router(TRouter *);
-  void invalidate(int);
+  void invalidate_direction(int);
+  void free_direction(int);
   DiSR_status getStatus() const;
   void setLinks(int type, const vector<int>& directions,const TSegmentId& id);
   TSegmentId getLocalSegmentID() const;
