@@ -254,7 +254,7 @@ void GlobalStats::showStats(std::ostream & out )
 		if (tid.isAssigned())
 		    fprintf(fp,"N%d [shape=circle, fixedsize=true]; ",net->t[x][y]->r->local_id);
 		else
-		    fprintf(fp,"N%d [shape=circle, fixedsize=true]; ",net->t[x][y]->r->local_id);
+		    fprintf(fp,"N%d [shape=square, fixedsize=true]; ",net->t[x][y]->r->local_id);
 	    }
 	    fprintf(fp," }");
 	}

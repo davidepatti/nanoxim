@@ -313,7 +313,7 @@ int DiSR::process(TPacket& p)
 	    }
 	    // a segment request reached a node currently performing a find segment process
 	    // This means that the node is already assigned and visited and thus can confirm the request
-	    // NOTE: this is the same as ACTIVE_SEARCHING case, the only difference is that no search is currently ongoing (e.g. no free links)
+	    // NOTE: this is the same as ASSIGNED case below
 	    else if (this->getStatus()==ACTIVE_SEARCHING)
 	    {
 		assert(this->visited);
@@ -345,8 +345,9 @@ int DiSR::process(TPacket& p)
 	    //
 	    else if (this->getStatus()==CANDIDATE)
 	    {
-		generate_segment_cancel(p);
 		cout << "[node "<< router->local_id <<  "] DiSR::process() already CANDIDATE with id " << this->segID << ", cancelling request "<< packet_segment_id << " from " << p.dir_in << endl;
+		free_direction(p.dir_in);
+		generate_segment_cancel(p);
 
 		/*
 		if (this->segID<packet_segment_id)
@@ -356,8 +357,6 @@ int DiSR::process(TPacket& p)
 		    */
 
 		// the incoming direction becomes free
-		link_visited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
-		link_visited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 
 		return ACTION_CANCEL_REQUEST;
 
@@ -576,8 +575,7 @@ int DiSR::process(TPacket& p)
 		link_tvisited[freedirection] = packet_segment_id;
 
 		// the incoming link changes from tvsited to free 
-		this->link_visited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
-		this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
+		this->free_direction(p.dir_in);
 
 		// prepare the new request packet
 		TPacket packet;
@@ -593,11 +591,10 @@ int DiSR::process(TPacket& p)
 		router->inject_to_network(packet);
 		return ACTION_RETRY_REQUEST;
 	    }
-	    else
+	    else // no free links to retry the request
 	    {
 		// the incoming link becomes free 
-		this->link_visited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
-		this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
+		this->free_direction(p.dir_in);
 
 		// if the initial request started from here, no need
 		// to forward the segment cancel 
@@ -609,8 +606,7 @@ int DiSR::process(TPacket& p)
 		else
 		{
 		    // even the request path should be cleared
-		    this->link_visited[this->request_path].set(NOT_RESERVED,NOT_RESERVED);
-		    this->link_tvisited[this->request_path].set(NOT_RESERVED,NOT_RESERVED);
+		    this->free_direction(this->request_path);
 
 		    // node status changes from tvisited to free
 		    this->tvisited = false;
@@ -995,10 +991,24 @@ void DiSR::reset()
 	status = FREE;
 }
 
-void DiSR::invalidate(int d)
+void DiSR::invalidate_direction(int d)
 {
     link_visited[d].set(NOT_VALID,NOT_VALID);
     link_tvisited[d].set(NOT_VALID,NOT_VALID);
+
+}
+
+void DiSR::free_direction(int d)
+{
+    if (link_visited[d].isAssigned()) 
+	cout << "\n WARNING: avoiding freeing ASSIGNED link on DIR " << d << endl;
+    else
+	link_visited[d].set(NOT_RESERVED,NOT_RESERVED);
+
+    if (!link_visited[d].isValid()) cout << "\n WARNING: freeing NOT VALID link on DIR " << d << endl;
+    assert(link_visited[d].isValid());
+    //assert(!link_visited[d].isAssigned());
+    link_tvisited[d].set(NOT_RESERVED,NOT_RESERVED);
 
 }
 
