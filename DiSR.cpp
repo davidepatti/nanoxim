@@ -311,10 +311,9 @@ int DiSR::process(TPacket& p)
 		    return ACTION_SKIP;
 		}
 	    }
-	    // a segment request reached a node currently performing a
-	    // find segment process
-	    // This means that the node is already assigned and
-	    // visited and thus can confirm the request
+	    // a segment request reached a node currently performing a find segment process
+	    // This means that the node is already assigned and visited and thus can confirm the request
+	    // NOTE: this is the same as ACTIVE_SEARCHING case, the only difference is that no search is currently ongoing (e.g. no free links)
 	    else if (this->getStatus()==ACTIVE_SEARCHING)
 	    {
 		assert(this->visited);
@@ -326,8 +325,21 @@ int DiSR::process(TPacket& p)
 		return ACTION_CONFIRM;
 
 	    }
-	    // a segment request reached a node already candidate,
-	    // cancel the request along that direction
+	    // a segment request reached an already assigned node
+	    // thus can confirm the request
+	    // NOTE: this is the same as ACTIVE_SEARCHING case, the only difference is that no search is currently ongoing (e.g. no free links)
+	    else if (this->getStatus()==ASSIGNED)
+	    {
+		assert(this->visited);
+		// the incoming direction becomes visited 
+		link_visited[p.dir_in] = packet_segment_id;
+		link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
+		generate_segment_confirm(p);
+		this->set_request_path(p.dir_in); // future confirm packet will be forwarded along this direction 
+		return ACTION_CONFIRM;
+
+	    }
+	    // a segment request reached a node already candidate, cancel the request along that direction
 	    // TODO: or shuould retry ? if the node becomes assigned
 	    // the segment could be confirmed !
 	    //
@@ -985,8 +997,6 @@ void DiSR::reset()
 
 void DiSR::invalidate(int d)
 {
-    if (this->router->local_id==2)
-	cout << "\n *************** setting NOT_VALID along dir " << d << endl;
     link_visited[d].set(NOT_VALID,NOT_VALID);
     link_tvisited[d].set(NOT_VALID,NOT_VALID);
 
