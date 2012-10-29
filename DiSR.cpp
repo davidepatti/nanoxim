@@ -144,7 +144,7 @@ int DiSR::process(TPacket& p)
 	// if the node is already visited, the only possibility is
 	// that it was the initiator of the request
 
-	cout << "[node "<<router->local_id << "] DiSR::process() found STARTING SEG REQUEST with ID " << packet_segment_id << endl;
+	cout << "[node "<<router->local_id << "] DiSR::process() found STARTING_SEGMENT_REQUEST with ID " << packet_segment_id << endl;
 
 	 // locally generated // //////////////////////////////////////////////////
 	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
@@ -152,23 +152,34 @@ int DiSR::process(TPacket& p)
 	     // just inject to the link found by next_free_link() during bootstrap
 	    return p.dir_out;
 	}
-	// the packet returned to its orginal source, must confirm segment!
+	// A starting segment request packet returned to its orginal source, must confirm segment (if not done yet...)
 	// Note: this is a starting segment, the node is already
 	// visited, there's no need to move from tvisited to visited
 	else if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
-	    this->segID = packet_segment_id;
-	    link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
-	    link_visited[p.dir_in] = packet_segment_id;
+	    // if not confirmed yet...
+	    if (!(this->segID.isAssigned()))
+	    {
+		this->segID = packet_segment_id;
+		link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
+		link_visited[p.dir_in] = packet_segment_id;
 
-	    // since link LED has been updated:
-	    current_link = 0;
+		// since link LED has been updated:
+		current_link = 0;
 
-	    cout << "[node "<<router->local_id<<"] DiSR::process() confirming STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
-	    setStatus(ASSIGNED);
+		cout << "[node "<<router->local_id<<"] DiSR::process() confirming STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
+		setStatus(ASSIGNED);
 
-	    generate_segment_confirm(p);
-	    return ACTION_CONFIRM; 
+		generate_segment_confirm(p);
+		return ACTION_CONFIRM; 
+	    }
+	    else // starting segment with segID already confirmed...
+	    {
+		// TODO: determine more accurately what happened....
+		cout << "[node "<< router->local_id <<  "] DiSR::process() discarding STARTING_SEGMENT_REQUEST " << packet_segment_id << ", already done!" << endl;
+		return ACTION_DISCARD;
+	    }
+	    
 	}
 	// foreign starting segment request ////////////////////////////////////
 	else if (  p.src_id!=router->local_id ) 
@@ -874,7 +885,7 @@ void DiSR::bootstrap_node()
 	{
 	    TSegmentId segment_id;
 	    segment_id.set(router->local_id,candidate_link);
-	    // mark the link and the node with id of segment request
+	    // mark the link with id of segment request
 	    link_tvisited[candidate_link] = segment_id;
 	    visited = true;
 	    this->setStatus(ACTIVE_SEARCHING);
