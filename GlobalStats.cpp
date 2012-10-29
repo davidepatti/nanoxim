@@ -240,7 +240,10 @@ void GlobalStats::showStats(std::ostream & out )
 	    net->t[x][y]->r->stats.showStats(y * GlobalParams:: mesh_dim_x + x, out, true);
 	    */
 
-    if ( (fp = fopen("graph.gv","w"))!= NULL)
+    char fn[20];
+    sprintf(fn,"graph_%d",GlobalParams::disr_bootstrap_node);
+
+    if ( (fp = fopen(fn,"w"))!= NULL)
     {
 	// draw the network layout and declare nodes
 	fprintf(fp,"\n digraph G { graph [layout=dot] ");
