@@ -240,8 +240,8 @@ void GlobalStats::showStats(std::ostream & out )
 	    net->t[x][y]->r->stats.showStats(y * GlobalParams:: mesh_dim_x + x, out, true);
 	    */
 
-    char fn[20];
-    sprintf(fn,"graph_%d",GlobalParams::disr_bootstrap_node);
+    char fn[40];
+    sprintf(fn,"graph_%d.gv",GlobalParams::disr_bootstrap_node);
 
     if ( (fp = fopen(fn,"w"))!= NULL)
     {
@@ -303,7 +303,8 @@ void GlobalStats::showStats(std::ostream & out )
 
 	fprintf(fp,"\n }");
 	fclose(fp);
-        system("dot -Tpng -o graph.png graph.gv");
+	sprintf(fn,"dot -Tpng -o graph_%d.png graph_%d.gv",GlobalParams::disr_bootstrap_node,GlobalParams::disr_bootstrap_node);
+        system(fn);
     }
     else
     {
