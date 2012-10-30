@@ -385,6 +385,7 @@ int DiSR::process(TPacket& p)
 	// the packet returned to its orginal source
 	else if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
+	    cout << "[node "<< router->local_id <<  "] CRITICAL, local segID " << this->segID << ", packet  "<< packet_segment_id << " from " << p.dir_in << " with p.src_id " << p.src_id << endl;
 	    assert(false);
 	    // TODO: can this happen ?
 	    /*
@@ -588,10 +589,10 @@ int DiSR::process(TPacket& p)
 		// the incoming link changes from tvsited to free 
 		this->free_direction(p.dir_in);
 
-		// prepare the new request packet
+		// prepare the new request packet usign infos from cancel packet
 		TPacket packet;
 		packet.id = packet_segment_id;
-		packet.src_id = p.src_id;
+		packet.src_id = packet_segment_id.getNode(); //same as the original segment request packet
 		packet.type = SEGMENT_REQUEST;
 		packet.dir_in = DIRECTION_LOCAL;
 		packet.dir_out = freedirection;
