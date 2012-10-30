@@ -17,6 +17,7 @@ void showHelp(char selfname[])
   cout << "\t-sim N\t\tRun for the specified simulation time [cycles] (default " << DEFAULT_SIMULATION_TIME << ")" << endl << endl;
   cout << "\t-disr - Run setup for distribuited Segment-base Routing" << endl;
   cout << "\t-disr_bootstrap N - use node N as bootstrap node for Segment-base Routing" << endl;
+  cout << "\t-bootstrap_timeout N - used in DiSR Segment-base Routing" << endl;
 }
 
 //---------------------------------------------------------------------------
@@ -49,6 +50,16 @@ void checkInputParameters()
   {
     cerr << "Error: buffer must be >= 1" << endl;
     exit(1);
+  }
+
+  // default timeout to bootstrap can be insufficient in mashes with longer paths
+  if (GlobalParams::bootstrap_timeout==DEFAULT_BOOTSTRAP_TIMEOUT)
+  {
+      int mesh_size = GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y;
+
+      GlobalParams::bootstrap_timeout = mesh_size*3;
+      
+      cout << "WARNING: automatically increasing candidate timeout to " << GlobalParams::bootstrap_timeout << " , use -bootstrap_timeout to customize..." << endl;
   }
 
 }
@@ -88,6 +99,8 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	  GlobalParams::disr = 1;
       else if (!strcmp(arg_vet[i], "-disr_bootstrap"))
 	GlobalParams::disr_bootstrap_node = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-bootstrap_timeout"))
+	GlobalParams::bootstrap_timeout = atoi(arg_vet[++i]);
       else 
       {
 	cerr << "Error: Invalid option: " << arg_vet[i] << endl;
