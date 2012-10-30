@@ -58,6 +58,8 @@ DiSR_status DiSR::getStatus() const
 	    assert(tvisited==false);
 	    break;
 	case FREE:
+	    if (tvisited)
+		cout << "[node " <<router->local_id<< "] DiSR::getStatus()  FREE with tvisited" << this->status << endl;
 	    assert(tvisited==false);
 	    assert(visited==false);
 	    break;
@@ -751,44 +753,65 @@ void DiSR::update_status()
 	start_investigate_links();
     }
 
-    if (this->status==CANDIDATE_STARTING)
+    // if this is the initial node the bootstrapped the starting segmnet request
+    if (this->status==CANDIDATE_STARTING && this->visited)
     {
-	timeout--;
-	if (timeout>0)
+	bootstrap_timeout--;
+	if (bootstrap_timeout>0)
 	{
-	    if (timeout%50==0)
-		cout << "[node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE_STARTING remaining timeout: " << timeout << endl;
+	    if (bootstrap_timeout%10==0)
+		cout << "[node "<<router->local_id<<"] DiSR::update_status(), bootstrap node emaining timeout: " << bootstrap_timeout << endl;
 	}
-	else
+	else // this condition should be really critical, assuming a proper timeout has been used
 	{
-	    cout << "[node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE timeout RESET!" << endl;
-	    timeout = MAX_TIMEOUT;
+	    cout << "CRITICAL [node "<<router->local_id<<"] DiSR::update_status(), bootstrap timeout RESET!" << endl;
+	    assert(false);
+	    /*
+	    candidate_timeout = GlobalParams::candidate_timeout;
 	    this->setStatus(FREE);
-	    // TODO: also reset links!
+	    */
 	}
     }
 
-    // TODO: do the same for normal segment candidates ? use different
-    // timeout ?
+    // DEPRECATED, any candidate node should return free only using SEGMENT_CANCEL mechanism, in order to avoid inconsistencies 
+    // short timeouts, etc...
+    // The max hop limit should be used instead in order to limit
+    /*
     if (this->status==CANDIDATE)
     {
-	timeout--;
-	if (timeout>0)
+	candidate_timeout--;
+	if (candidate_timeout>0)
 	{
 
-	    //if (has_free_link()) continue_investigate_links();
-
-	    if (timeout%50==0)
-		cout << "[node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE remaining timeout: " << timeout << endl;
+	    if (candidate_timeout%10==0)
+		cout << "[node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE remaining timeout: " << candidate_timeout << endl;
 	}
 	else
 	{
-	    cout << "[node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE timeout RESET!" << endl;
-	    timeout = MAX_TIMEOUT;
+	    visited= false;
+	    tvisited= false;
+	    segID.set(NOT_RESERVED,NOT_RESERVED);
+	    starting = false;
+	    terminal = false;
+	    subnet = NOT_RESERVED;
+	    current_link = DIRECTION_NORTH;
+
+	    for (int i =0;i<DIRECTIONS;i++)
+	    {
+		// note: not valid links shouldnt' be set as free
+		if (link_visited[i].isValid())
+		{
+		    link_visited[i].set(NOT_RESERVED,NOT_RESERVED);
+		    link_tvisited[i].set(NOT_RESERVED,NOT_RESERVED);
+		}
+	    }
+	    cout << "WARNING [node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE timeout RESET!" << endl;
+	    candidate_timeout = GlobalParams::candidate_timeout;
 	    this->setStatus(FREE);
 	    // TODO: also reset links!
 	}
     }
+    */
 }
 
 // a visited node connected to not visited/tvisited links can start
@@ -995,10 +1018,12 @@ void DiSR::reset()
     // the whole algorithm
     // Whener the router pointer is updated, status must be resetted
 
-    timeout = MAX_TIMEOUT;
 
     if ((router!=NULL) && (router->local_id == GlobalParams::disr_bootstrap_node)) 
+    {
+	bootstrap_timeout = GlobalParams::bootstrap_timeout;
 	status = BOOTSTRAP;
+    }
     else
 	status = FREE;
 }

@@ -42,6 +42,7 @@ int   GlobalParams::simulation_time		      = DEFAULT_SIMULATION_TIME;
 int   GlobalParams::rnd_generator_seed               = 0;
 int   GlobalParams::disr               = DEFAULT_DISR_SETUP;
 int   GlobalParams::disr_bootstrap_node               = DEFAULT_DISR_BOOTSTRAP_NODE;
+int   GlobalParams::bootstrap_timeout               = DEFAULT_BOOTSTRAP_TIMEOUT;
 
 //---------------------------------------------------------------------------
 

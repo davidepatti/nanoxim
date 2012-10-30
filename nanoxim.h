@@ -45,7 +45,6 @@ using namespace std;
 #define TVISITED 2
 #define ALL 3
 
-#define MAX_TIMEOUT 100
 
 
 
@@ -67,6 +66,7 @@ using namespace std;
 #define DEFAULT_RESET_TIME                        1000
 #define DEFAULT_DISR_SETUP			     0
 #define DEFAULT_DISR_BOOTSTRAP_NODE		     0
+#define DEFAULT_BOOTSTRAP_TIMEOUT	          1000 
 
 // TODO by Fafa - this MUST be removed!!!
 #define MAX_STATIC_DIM 20
@@ -93,6 +93,7 @@ struct GlobalParams
   static int rnd_generator_seed;
   static int disr;
   static int disr_bootstrap_node;
+  static int bootstrap_timeout;
 };
 
 
@@ -271,7 +272,7 @@ class DiSR
   int current_link;
   TRouter * router;
 
-  int timeout;
+  int bootstrap_timeout;
 
   DiSR_status status;
   
