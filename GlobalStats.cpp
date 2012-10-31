@@ -273,9 +273,9 @@ void GlobalStats::showStats(std::ostream & out )
 		{
 		    TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_EAST);
 		    if (tid.isAssigned())
-			fprintf(fp,"\nN%d->N%d [dir=both, label=\"%d.%d\"]",curr_id,curr_id+1,tid.getNode(),tid.getLink());
+			fprintf(fp,"\nN%d->N%d [dir=none, color=red, style=bold, label=\"%d.%d\"]",curr_id,curr_id+1,tid.getNode(),tid.getLink());
 		    else
-			fprintf(fp,"\nN%d->N%d [dir=none, label=\".\"]",curr_id,curr_id+1);
+			fprintf(fp,"\nN%d->N%d [dir=none, style=dotted, label=\".\"]",curr_id,curr_id+1);
 
 		}
 	    }
@@ -293,9 +293,9 @@ void GlobalStats::showStats(std::ostream & out )
 		{
 		    TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_SOUTH);
 		    if (tid.isAssigned())
-			fprintf(fp,"\nN%d->N%d [dir=both, label=\"%d.%d\"]",curr_id,south_id,tid.getNode(),tid.getLink());
+			fprintf(fp,"\nN%d->N%d [dir=none, color=red, style=bold, label=\"%d.%d\"]",curr_id,south_id,tid.getNode(),tid.getLink());
 		    else
-			fprintf(fp,"\nN%d->N%d [dir=none, label=\".\"]",curr_id,south_id);
+			fprintf(fp,"\nN%d->N%d [dir=none, style=dotted, label=\".\"]",curr_id,south_id);
 
 		}
 	    }
