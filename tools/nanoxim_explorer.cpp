@@ -20,14 +20,13 @@ using namespace std;
 #define REPETITIONS_LABEL    "repetitions"
 #define TMP_DIR_LABEL        "tmp"
 
-#define DEF_SIMULATOR        "./noxim"
+#define DEF_SIMULATOR        "./nanoxim"
 #define DEF_REPETITIONS      5
 #define DEF_TMP_DIR          "./"
 
-#define TMP_FILE_NAME        ".noxim_explorer.tmp"
+#define TMP_FILE_NAME        ".nanoxim_explorer.tmp"
 
 #define RPACKETS_LABEL       "% Total received packets:"
-#define RFLITS_LABEL         "% Total received flits:"
 #define AVG_DELAY_LABEL      "% Global average delay (cycles):"
 #define AVG_THROUGHPUT_LABEL "% Global average throughput (flits/cycle):"
 #define THROUGHPUT_LABEL     "% Throughput (flits/cycle/IP):"
@@ -67,7 +66,6 @@ struct TSimulationResults
   double       max_delay;
   double       total_energy;
   unsigned int rpackets;
-  unsigned int rflits;
 };
 
 //---------------------------------------------------------------------------
@@ -255,6 +253,7 @@ bool ManageParameter(ifstream& fin,
 {
   bool err;
 
+  // TODO: remove pir
   if (parameter == "pir")
     err = ManageCompressedParameterSet(fin, parameter, params_space, error_msg);
   else
@@ -544,15 +543,6 @@ bool ReadResults(const string& fname,
 	  continue;
 	}
       
-      pos = line.find(RFLITS_LABEL);
-      if (pos != string::npos) 
-	{
-	  nread++;
-	  istringstream iss(line.substr(pos + string(RFLITS_LABEL).size()));
-	  iss >> sres.rflits;
-	  continue;
-	}
-
       pos = line.find(AVG_DELAY_LABEL);
       if (pos != string::npos) 
 	{
@@ -621,11 +611,13 @@ bool RunSimulation(const string& cmd_base,
 
   cout << cmd << endl;
   system(cmd.c_str());
+  /*
   if (!ReadResults(tmp_fname, sres, error_msg))
     return false;
 
   string rm_cmd = string("rm -f ") + tmp_fname;
   system(rm_cmd.c_str());
+  */
 
   return true;
 }
@@ -680,7 +672,6 @@ bool RunSimulations(double start_time,
 	   << setw(MATRIX_COLUMN_WIDTH) << sres.max_delay
 	   << setw(MATRIX_COLUMN_WIDTH) << sres.total_energy
 	   << setw(MATRIX_COLUMN_WIDTH) << sres.rpackets
-	   << setw(MATRIX_COLUMN_WIDTH) << sres.rflits 
 	   << endl;
     }
 
@@ -702,8 +693,7 @@ bool PrintMatlabVariableBegin(const TParametersSpace& aggragated_params_space,
        << setw(MATRIX_COLUMN_WIDTH) << "throughput"
        << setw(MATRIX_COLUMN_WIDTH) << "max_delay"
        << setw(MATRIX_COLUMN_WIDTH) << "total_energy"
-       << setw(MATRIX_COLUMN_WIDTH) << "rpackets"
-       << setw(MATRIX_COLUMN_WIDTH) << "rflits";
+       << setw(MATRIX_COLUMN_WIDTH) << "rpackets";
 
   fout << endl;
 
@@ -823,7 +813,7 @@ bool RunSimulations(const TConfigurationSpace& conf_space,
       string conf_cmd_line = Configuration2CmdLine(conf_space[i]);
 
       string   mfname = Configuration2FunctionName(conf_space[i]);
-      string   fname  = mfname + ".m";
+      string   fname  = string("out_matlab/")+mfname + ".m";
       ofstream fout;
       if (!PrintHeader(fname, eparams, 
 		       def_cmd_line, conf_cmd_line, fout, error_msg))
