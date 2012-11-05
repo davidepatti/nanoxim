@@ -240,10 +240,10 @@ void GlobalStats::showStats(std::ostream & out )
 	    net->t[x][y]->r->stats.showStats(y * GlobalParams:: mesh_dim_x + x, out, true);
 	    */
 
-    char fn[40];
-    sprintf(fn,"graph_%d.gv",GlobalParams::disr_bootstrap_node);
+    char fn[50];
+    sprintf(fn,"graph_%dx%d_b%d",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::disr_bootstrap_node);
 
-    if ( (fp = fopen(fn,"w"))!= NULL)
+    if ( (fp = fopen(strcat(fn,".gv"),"w"))!= NULL)
     {
 	// draw the network layout and declare nodes
 	fprintf(fp,"\n digraph G { graph [layout=dot] ");
@@ -297,14 +297,16 @@ void GlobalStats::showStats(std::ostream & out )
 		    else
 			fprintf(fp,"\nN%d->N%d [dir=none, style=dotted, label=\".\"]",curr_id,south_id);
 
+
 		}
 	    }
 	}
 
 	fprintf(fp,"\n }");
 	fclose(fp);
-	sprintf(fn,"dot -Tpng -o graph_%d.png graph_%d.gv",GlobalParams::disr_bootstrap_node,GlobalParams::disr_bootstrap_node);
-        system(fn);
+	char cmd[100];
+	sprintf(cmd,"dot -Tpng -o %s.png %s",fn,fn);
+        system(cmd);
     }
     else
     {
