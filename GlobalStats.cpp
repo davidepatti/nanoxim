@@ -241,7 +241,7 @@ void GlobalStats::showStats(std::ostream & out )
 	    */
 
     char fn[50];
-    sprintf(fn,"graph_%dx%d_b%d",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::disr_bootstrap_node);
+    sprintf(fn,"graph_%dx%d_b%d",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap);
 
     if ( (fp = fopen(strcat(fn,".gv"),"w"))!= NULL)
     {
@@ -254,8 +254,16 @@ void GlobalStats::showStats(std::ostream & out )
 	    for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
 	    {
 		TSegmentId tid = net->t[x][y]->r->disr.getLocalSegmentID();
-		if (tid.isAssigned())
-		    fprintf(fp,"N%d [shape=circle, fixedsize=true]; ",net->t[x][y]->r->local_id);
+		int local_id = net->t[x][y]->r->local_id;
+
+		if (net->t[x][y]->r->disr.isAssigned())
+		{
+		    if (local_id == GlobalParams::bootstrap)
+			fprintf(fp,"N%d [shape=circle, style=filled, fixedsize=true]; ",local_id);
+		    else
+			fprintf(fp,"N%d [shape=circle, fixedsize=true]; ",local_id);
+
+		}
 		else
 		    fprintf(fp,"N%d [shape=square, fixedsize=true]; ",net->t[x][y]->r->local_id);
 	    }

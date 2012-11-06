@@ -23,7 +23,7 @@ void DiSR::set_router(TRouter * r)
     // To test the model, the node 0 is always used for bootstrapping 
     // the whole algorithm
     // Whener the router pointer is updated, status must be resetted
-    if (r->local_id == GlobalParams::disr_bootstrap_node) 
+    if (r->local_id == GlobalParams::bootstrap) 
 	setStatus(BOOTSTRAP);
     else
 	setStatus(FREE);
@@ -35,7 +35,7 @@ DiSR_status DiSR::getStatus() const
     // sanity check of some assumed environmnet values
     switch (this->status) {
 	case BOOTSTRAP:
-	    assert(this->router->local_id == GlobalParams::disr_bootstrap_node);
+	    assert(this->router->local_id == GlobalParams::bootstrap);
 	    assert(tvisited==false);
 	    assert(visited==false);
 	    break;
@@ -68,7 +68,12 @@ DiSR_status DiSR::getStatus() const
     }
 
     return (this->status);
+}
 
+bool DiSR::isAssigned() const
+{
+    // TODO: check if visited is equivalent to belonging to some segment
+    return visited;
 }
 
 void DiSR::setStatus(const DiSR_status& new_status)
@@ -1010,7 +1015,7 @@ void DiSR::reset()
     visited= false;
     tvisited= false;
     segID.set(NOT_RESERVED,NOT_RESERVED);
-    starting = false;
+    //starting = false;
     terminal = false;
     subnet = NOT_RESERVED;
     current_link = DIRECTION_NORTH;
@@ -1030,7 +1035,7 @@ void DiSR::reset()
     // Whener the router pointer is updated, status must be resetted
 
 
-    if ((router!=NULL) && (router->local_id == GlobalParams::disr_bootstrap_node)) 
+    if ((router!=NULL) && (router->local_id == GlobalParams::bootstrap)) 
     {
 	bootstrap_timeout = GlobalParams::bootstrap_timeout;
 	status = BOOTSTRAP;
