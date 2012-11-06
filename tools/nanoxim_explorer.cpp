@@ -253,8 +253,7 @@ bool ManageParameter(ifstream& fin,
 {
   bool err;
 
-  // TODO: remove pir
-  if (parameter == "pir")
+  if (parameter == "bootstrap")
     err = ManageCompressedParameterSet(fin, parameter, params_space, error_msg);
   else
     err = ManagePlainParameterSet(fin, parameter, params_space, error_msg);
