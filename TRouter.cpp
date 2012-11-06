@@ -375,6 +375,9 @@ int TRouter::process(TPacket& p)
 	return this->disr.process(p);
     }
 
+    // routing disabled
+    assert(false);
+
     //deliver to local PE
     if (p.dst_id == local_id)
 	return DIRECTION_LOCAL;

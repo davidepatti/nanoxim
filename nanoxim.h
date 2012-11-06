@@ -92,7 +92,7 @@ struct GlobalParams
   static int simulation_time;
   static int rnd_generator_seed;
   static int disr;
-  static int disr_bootstrap_node;
+  static int bootstrap;
   static int bootstrap_timeout;
 };
 
@@ -239,6 +239,7 @@ class DiSR
   void setLinks(int type, const vector<int>& directions,const TSegmentId& id);
   TSegmentId getLocalSegmentID() const;
   TSegmentId getLinkSegmentID(int d) const;
+  bool isAssigned() const;
 
 
     private:
@@ -266,7 +267,7 @@ class DiSR
   TSegmentId link_visited[4];
   TSegmentId link_tvisited[4];
 
-  bool starting;
+  //bool starting;
   bool terminal;
   int subnet;
   int current_link;

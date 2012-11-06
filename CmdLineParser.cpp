@@ -16,7 +16,7 @@ void showHelp(char selfname[])
   cout << "\t-routing TYPE\tSet the routing algorithm to TYPE where TYPE is one of the following (default " << ROUTING_XY << "):" << endl;
   cout << "\t-sim N\t\tRun for the specified simulation time [cycles] (default " << DEFAULT_SIMULATION_TIME << ")" << endl << endl;
   cout << "\t-disr - Run setup for distribuited Segment-base Routing" << endl;
-  cout << "\t-disr_bootstrap N - use node N as bootstrap node for Segment-base Routing" << endl;
+  cout << "\t-bootstrap N - use node N as bootstrap node for Segment-base Routing" << endl;
   cout << "\t-bootstrap_timeout N - used in DiSR Segment-base Routing" << endl;
 }
 
@@ -89,16 +89,15 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	GlobalParams::buffer_depth = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-routing"))
       {
-	char *routing = arg_vet[++i];
-        if (!strcmp(routing, "xy")) 
+	  // currently disabled
 	  GlobalParams::routing_algorithm = ROUTING_XY;
       }
       else if (!strcmp(arg_vet[i], "-sim"))
 	GlobalParams::simulation_time = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-disr")) 
 	  GlobalParams::disr = 1;
-      else if (!strcmp(arg_vet[i], "-disr_bootstrap"))
-	GlobalParams::disr_bootstrap_node = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-bootstrap"))
+	GlobalParams::bootstrap = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-bootstrap_timeout"))
 	GlobalParams::bootstrap_timeout = atoi(arg_vet[++i]);
       else 
