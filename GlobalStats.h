@@ -24,6 +24,7 @@ class GlobalStats {
 
     GlobalStats(const TNet * _net);
 
+
     // Returns the aggragated average delay (cycles)
     double getAverageDelay();
 
@@ -69,11 +70,36 @@ class GlobalStats {
     // Shows global statistics
     void showStats(std::ostream & out = std::cout);
 
+    void drawGraphviz();
+
+
 #ifdef TESTING
     unsigned int drained_total;
 #endif
 
   private:
+    // DiSR stats functions and structures ////////////////////
+    void generate_disr_stats();
+    /*  percentage of nodes covered/assigned by the DiSR */
+    void compute_disr_node_coverage();
+    /*  percentage of nodes covered/assigned by the DiSR */
+    void compute_disr_link_coverage();
+    /*  percentage of defective nodes */
+    void compute_disr_defective_nodes();
+
+    struct 
+    {
+	int total_nodes;
+	int total_links;
+	int defective_nodes;
+	int covered_nodes;
+	int covered_links;
+	double node_coverage;
+	double link_coverage;
+    }
+    DiSR_stats;
+
+
     const TNet *net;
 };
 
