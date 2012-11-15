@@ -26,15 +26,13 @@ using namespace std;
 
 #define TMP_FILE_NAME        ".nanoxim_explorer.tmp"
 
-#define RPACKETS_LABEL       "% Total received packets:"
-#define AVG_DELAY_LABEL      "% Global average delay (cycles):"
-#define AVG_THROUGHPUT_LABEL "% Global average throughput (flits/cycle):"
-#define THROUGHPUT_LABEL     "% Throughput (flits/cycle/IP):"
-#define MAX_DELAY_LABEL      "% Max delay (cycles):"
-#define TOTAL_ENERGY_LABEL   "% Total energy (J):"
+#define DEFECTIVE_NODES_LABEL   "% defective nodes:"
+#define NODE_COVERAGE_LABEL 	"% node coverage:"
+#define LINK_COVERAGE_LABEL	"% link coverage:"
 
 #define MATLAB_VAR_NAME      "data"
 #define MATRIX_COLUMN_WIDTH  15
+#define OUTPUTS_COL 2
 
 //---------------------------------------------------------------------------
 
@@ -60,12 +58,10 @@ struct TExplorerParams
 
 struct TSimulationResults
 {
-  double       avg_delay;
-  double       throughput;
-  double       avg_throughput;
-  double       max_delay;
-  double       total_energy;
-  unsigned int rpackets;
+	int covered_nodes;
+	int covered_links;
+	double node_coverage;
+	double link_coverage;
 };
 
 //---------------------------------------------------------------------------
@@ -117,11 +113,11 @@ string TrimLeftAndRight(const string& s)
 
 bool ExtractParameter(const string& s, string& parameter)
 {
-  uint i = s.find("[");
+  long int i = s.find("[");
 
   if (i != string::npos)
     {
-      uint j = s.rfind("]");
+      long int j = s.rfind("]");
       
       if (j != string::npos)
 	{
@@ -506,7 +502,7 @@ bool PrintMatlabFunction(const string& mfname,
 			 ofstream& fout, 
 			 string& error_msg)
 {
-  fout << "function [max_pir, max_throughput, min_delay] = " << mfname << "(symbol)" << endl
+  fout << "function [node_coverage, link_coverage] = " << mfname << "(symbol)" << endl
        << endl;
 
   return true;
@@ -531,64 +527,28 @@ bool ReadResults(const string& fname,
       string line;
       getline(fin, line);
 
-      uint pos;
+      long int  pos;
       
-      pos = line.find(RPACKETS_LABEL);
+      pos = line.find(NODE_COVERAGE_LABEL);
       if (pos != string::npos) 
 	{
 	  nread++;
-	  istringstream iss(line.substr(pos + string(RPACKETS_LABEL).size()));
-	  iss >> sres.rpackets;
-	  continue;
-	}
-      
-      pos = line.find(AVG_DELAY_LABEL);
-      if (pos != string::npos) 
-	{
-	  nread++;
-	  istringstream iss(line.substr(pos + string(AVG_DELAY_LABEL).size()));
-	  iss >> sres.avg_delay;
+	  istringstream iss(line.substr(pos + string(NODE_COVERAGE_LABEL).size()));
+	  iss >> sres.node_coverage;
 	  continue;
 	}
 
-      pos = line.find(AVG_THROUGHPUT_LABEL);
+      pos = line.find(LINK_COVERAGE_LABEL);
       if (pos != string::npos) 
 	{
 	  nread++;
-	  istringstream iss(line.substr(pos + string(AVG_THROUGHPUT_LABEL).size()));
-	  iss >> sres.avg_throughput;
-	  continue;
-	}
-
-      pos = line.find(THROUGHPUT_LABEL);
-      if (pos != string::npos) 
-	{
-	  nread++;
-	  istringstream iss(line.substr(pos + string(THROUGHPUT_LABEL).size()));
-	  iss >> sres.throughput;
-	  continue;
-	}
-
-      pos = line.find(MAX_DELAY_LABEL);
-      if (pos != string::npos) 
-	{
-	  nread++;
-	  istringstream iss(line.substr(pos + string(MAX_DELAY_LABEL).size()));
-	  iss >> sres.max_delay;
-	  continue;
-	}
-
-      pos = line.find(TOTAL_ENERGY_LABEL);
-      if (pos != string::npos) 
-	{
-	  nread++;
-	  istringstream iss(line.substr(pos + string(TOTAL_ENERGY_LABEL).size()));
-	  iss >> sres.total_energy;
+	  istringstream iss(line.substr(pos + string(LINK_COVERAGE_LABEL).size()));
+	  iss >> sres.link_coverage;
 	  continue;
 	}
     }
 
-  if (nread != 7)
+  if (nread != 2)
     {
       error_msg = "Output file " + fname + " corrupted";
       return false;
@@ -610,13 +570,11 @@ bool RunSimulation(const string& cmd_base,
 
   cout << cmd << endl;
   system(cmd.c_str());
-  /*
   if (!ReadResults(tmp_fname, sres, error_msg))
     return false;
 
   string rm_cmd = string("rm -f ") + tmp_fname;
   system(rm_cmd.c_str());
-  */
 
   return true;
 }
@@ -666,11 +624,8 @@ bool RunSimulations(double start_time,
       // fout << setw(MATRIX_COLUMN_WIDTH) << aggr_conf[i].second;
 
       // Print results;
-      fout << setw(MATRIX_COLUMN_WIDTH) << sres.avg_delay
-	   << setw(MATRIX_COLUMN_WIDTH) << sres.throughput
-	   << setw(MATRIX_COLUMN_WIDTH) << sres.max_delay
-	   << setw(MATRIX_COLUMN_WIDTH) << sres.total_energy
-	   << setw(MATRIX_COLUMN_WIDTH) << sres.rpackets
+      fout << setw(MATRIX_COLUMN_WIDTH) << sres.node_coverage
+	   << setw(MATRIX_COLUMN_WIDTH) << sres.link_coverage
 	   << endl;
     }
 
@@ -688,11 +643,8 @@ bool PrintMatlabVariableBegin(const TParametersSpace& aggragated_params_space,
        i!=aggragated_params_space.end(); i++)
     fout << setw(MATRIX_COLUMN_WIDTH) << i->first;
 
-  fout << setw(MATRIX_COLUMN_WIDTH) << "avg_delay"
-       << setw(MATRIX_COLUMN_WIDTH) << "throughput"
-       << setw(MATRIX_COLUMN_WIDTH) << "max_delay"
-       << setw(MATRIX_COLUMN_WIDTH) << "total_energy"
-       << setw(MATRIX_COLUMN_WIDTH) << "rpackets";
+  fout << setw(MATRIX_COLUMN_WIDTH) << "node_coverage"
+       << setw(MATRIX_COLUMN_WIDTH) << "link_coverage";
 
   fout << endl;
 
@@ -706,28 +658,33 @@ bool GenMatlabCode(const string& var_name,
 		   const int repetitions, const int column,
 		   ofstream& fout, string& error_msg)
 {
+    int out_col = OUTPUTS_COL;
+
   fout << var_name << " = [];" << endl
        << "for i = 1:rows/" << repetitions << "," << endl
        << "   ifirst = (i - 1) * " << repetitions << " + 1;" << endl
        << "   ilast  = ifirst + " << repetitions << " - 1;" << endl
-       << "   tmp = " << MATLAB_VAR_NAME << "(ifirst:ilast, cols-6+" << column << ");" << endl
+       << "   tmp = " << MATLAB_VAR_NAME << "(ifirst:ilast, cols-" << out_col <<"+" << column << ");" << endl
        << "   avg = mean(tmp);" << endl
        << "   [h sig ci] = ttest(tmp, 0.1);" << endl
        << "   ci = (ci(2)-ci(1))/2;" << endl
-       << "   " << var_name << " = [" << var_name << "; " << MATLAB_VAR_NAME << "(ifirst, 1:cols-6), avg ci];" << endl
+       << "   " << var_name << " = [" << var_name << "; " << MATLAB_VAR_NAME << "(ifirst, 1:cols-"<<out_col<<"), avg ci];" << endl
        << "end" << endl
        << endl;
 
   fout << "figure(" << fig_no << ");" << endl
        << "hold on;" << endl
        << "plot(" << var_name << "(:,1), " << var_name << "(:,2), symbol);" << endl
+       << "ylim([0 1])" << endl
+       << "ylabel('"<<var_name<<"')" << endl
        << endl;
+
 
   return true;
 }
 
 //---------------------------------------------------------------------------
-
+/*
 bool GenMatlabCodeSaturationAnalysis(const string& var_name,
 				     ofstream& fout, string& error_msg)
 {
@@ -752,7 +709,7 @@ bool GenMatlabCodeSaturationAnalysis(const string& var_name,
 }
 
 //---------------------------------------------------------------------------
-
+*/
 bool PrintMatlabVariableEnd(const int repetitions,
 			    ofstream& fout, string& error_msg)
 {
@@ -762,23 +719,12 @@ bool PrintMatlabVariableEnd(const int repetitions,
        << "cols = size(" << MATLAB_VAR_NAME << ", 2);" << endl
        << endl;
 
-  if (!GenMatlabCode(string(MATLAB_VAR_NAME) + "_delay", 1,
+  if (!GenMatlabCode(string(MATLAB_VAR_NAME) + "_node_coverage", 2,
 		     repetitions, 1, fout, error_msg))
     return false;
 
-  if (!GenMatlabCode(string(MATLAB_VAR_NAME) + "_throughput", 2,
+  if (!GenMatlabCode(string(MATLAB_VAR_NAME) + "_link_converage", 3,
 		     repetitions, 2, fout, error_msg))
-    return false;
-
-  if (!GenMatlabCode(string(MATLAB_VAR_NAME) + "_maxdelay", 3,
-		     repetitions, 3, fout, error_msg))
-    return false;
-
-  if (!GenMatlabCode(string(MATLAB_VAR_NAME) + "_totalenergy", 4,
-		     repetitions, 4, fout, error_msg))
-    return false;
-
-  if (!GenMatlabCodeSaturationAnalysis(string(MATLAB_VAR_NAME), fout, error_msg))
     return false;
 
   return true;
@@ -814,8 +760,7 @@ bool RunSimulations(const TConfigurationSpace& conf_space,
       string   mfname = Configuration2FunctionName(conf_space[i]);
       string   fname  = string("out_matlab/")+mfname + ".m";
       ofstream fout;
-      if (!PrintHeader(fname, eparams, 
-		       def_cmd_line, conf_cmd_line, fout, error_msg))
+      if (!PrintHeader(fname, eparams, def_cmd_line, conf_cmd_line, fout, error_msg))
 	return false;
 
       if (!PrintMatlabFunction(mfname, fout, error_msg))
@@ -827,12 +772,7 @@ bool RunSimulations(const TConfigurationSpace& conf_space,
       for (uint j=0; j<aggr_conf_space.size(); j++)
 	{
 	  string aggr_cmd_line = Configuration2CmdLine(aggr_conf_space[j]);
-	  /*
-	  string cmd = eparams.simulator + " "
-	    + def_cmd_line + " "
-	    + conf_cmd_line + " "
-	    + aggr_cmd_line;
-	  */
+
 	  string cmd = eparams.simulator + " "
             + aggr_cmd_line + " "
 	    + def_cmd_line + " "
