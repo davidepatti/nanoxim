@@ -362,10 +362,13 @@ int DiSR::process(TPacket& p)
 	    //
 	    else if (this->getStatus()==CANDIDATE)
 	    {
-		// a segment request that has  been already processed, retry forward
-		if (this->segID==packet_segment_id)
+		// a locally generated segment request that has been already processed
+		if (this->segID==packet_segment_id && p.dir_in==DIRECTION_LOCAL)
 		{
-		    cout << "[node "<< router->local_id <<  "] WARNING: already processed SEGMENT_REQUEST  " << packet_segment_id << endl;
+		    cout << "[node "<< router->local_id <<  "] WARNING: already processed locally generated SEGMENT_REQUEST  " << packet_segment_id << endl;
+
+		    // re-try along the same direction...
+
 		    for (int i=0;i<DIRECTIONS;i++)
 		    {
 			// check for the previously reserved direction
@@ -376,13 +379,21 @@ int DiSR::process(TPacket& p)
 			    return i;
 			}
 		    }
-
+		    // you shouldn't be here...
 		    cout << "CRITICAL [node "<< router->local_id <<  "] DiSR::process() no reserved direction for already processed SEGMENT_REQUEST  " << packet_segment_id << endl;
 		    assert(false);
 		}
+		// In two cases an already candidate node should reject request:
+		// - the request id is different (of course...)
+		// - the request id is the same for which the node is candidate, but the packet does NOT come from local direction, i.e. made a loop path 
+		// returning to the node
 		else
 		{
-		    cout << "[node "<< router->local_id <<  "] DiSR::process() already CANDIDATE with id " << this->segID << ", cancelling request "<< packet_segment_id << " from " << p.dir_in << endl;
+		    if (!(this->segID==packet_segment_id))
+			cout << "[node "<< router->local_id <<  "] DiSR::process() already CANDIDATE with id " << this->segID << ", cancelling request "<< packet_segment_id << " from " << p.dir_in << endl;
+		    else
+			cout << "[node "<< router->local_id <<  "] DiSR::process() CANDIDATE with same id, discarding request"<< packet_segment_id << " from " << p.dir_in << ", forwarding already done! " << endl;
+
 		    free_direction(p.dir_in);
 		    generate_segment_cancel(p);
 		    // the incoming direction becomes free
@@ -650,6 +661,7 @@ int DiSR::process(TPacket& p)
 		// TODO: should we do this , when ?
 		// reset free link search pointer, since LED have been
 		// updated
+		assert(false);
 		this->current_link = DIRECTION_NORTH;
 
 		//cout << "[node "<< router->local_id <<  "] DiSR::process()  freeing request path " << this->request_path << " and incoming dir " << p.dir_in << endl;
@@ -675,7 +687,7 @@ void DiSR::set_request_path(int path)
 
 int DiSR::next_free_link()
 {
-    cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] ...";
+    //cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] ...";
     while (current_link<DIRECTION_LOCAL)
     {
 
@@ -687,7 +699,7 @@ int DiSR::next_free_link()
 	}
 	current_link++;
     }
-    cout << "no link found! " << endl;
+    //cout << "no link found! " << endl;
 
     return NOT_VALID;
 }
@@ -697,7 +709,7 @@ int DiSR::next_free_link()
 // link function calls
 int DiSR::has_free_link() const
 {
-    cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] ...";
+    //cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] ...";
     int tmp_link = current_link;
 
     while (tmp_link<DIRECTION_LOCAL)
@@ -710,7 +722,7 @@ int DiSR::has_free_link() const
 	}
 	tmp_link++;
     }
-    cout << "no link found! " << endl;
+    //cout << "no link found! " << endl;
 
     return false;
 }
