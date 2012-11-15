@@ -21,6 +21,95 @@ GlobalStats::GlobalStats(const TNet * _net)
 #endif
 }
 
+
+// Note: different style for DiSR stats functions:
+// - private methods that update local struct collecting all data
+
+
+void GlobalStats::generate_disr_stats()
+{
+    compute_disr_defective_nodes();
+    compute_disr_node_coverage();
+    compute_disr_link_coverage();
+}
+
+void GlobalStats::compute_disr_defective_nodes()
+{
+    int defective = 0;
+
+    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
+    {
+	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
+	    if (net->t[x][y]->r->disr.isAssigned());
+    }
+    this->DiSR_stats.defective_nodes = defective;
+}
+
+/* get the percentage of nodes covered/assigned by the DiSR 
+ *
+ * */
+void GlobalStats::compute_disr_node_coverage()
+{
+    int covered = 0;
+
+    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
+    {
+	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
+	    if (net->t[x][y]->r->disr.isAssigned())
+		covered++;
+    }
+
+    this->DiSR_stats.total_nodes = GlobalParams::mesh_dim_y * GlobalParams::mesh_dim_x;
+    this->DiSR_stats.covered_nodes = covered;
+    this->DiSR_stats.node_coverage = (double)covered/this->DiSR_stats.total_nodes;
+}
+
+/* get the percentage of links covered/assigned by the DiSR 
+ *
+ * */
+void GlobalStats::compute_disr_link_coverage()
+{
+    int covered = 0;
+    int total_links = 0;
+
+    // horizontal edges...
+    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
+    {
+	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
+	{
+	    if (x != GlobalParams::mesh_dim_x-1)
+	    {
+		total_links++;
+
+		TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_EAST);
+		if (tid.isAssigned())
+		    covered++;
+
+	    }
+	}
+    }
+
+    // vertical edges...
+    for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
+    {
+	for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
+	{
+	    if (y != GlobalParams::mesh_dim_y-1)
+	    {
+		total_links++;
+		TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_SOUTH);
+		if (tid.isAssigned())
+		    covered++;
+	    }
+	}
+    }
+
+    this->DiSR_stats.total_links = total_links;
+    this->DiSR_stats.covered_links = covered;
+    this->DiSR_stats.link_coverage = (double)covered/total_links;
+}
+
+
 double GlobalStats::getAverageDelay()
 {
     unsigned int total_packets = 0;
@@ -199,24 +288,6 @@ double GlobalStats::getThroughput()
 
 }
 
-vector < vector < unsigned long > > GlobalStats::getRoutedFlitsMtx()
-{
-
-    vector < vector < unsigned long > > mtx;
-
-    mtx.resize(GlobalParams::mesh_dim_y);
-    /*
-    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
-	mtx[y].resize(GlobalParams::mesh_dim_x);
-
-    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
-	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
-	    mtx[y][x] = net->t[x][y]->r->getRoutedFlits();
-	    */
-
-    return mtx;
-}
-
 double GlobalStats::getPower()
 {
     double power = 0.0;
@@ -230,15 +301,9 @@ double GlobalStats::getPower()
     return power;
 }
 
-void GlobalStats::showStats(std::ostream & out )
+void GlobalStats::drawGraphviz()
 {
     FILE * fp;
-
-    /*
-    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
-	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
-	    net->t[x][y]->r->stats.showStats(y * GlobalParams:: mesh_dim_x + x, out, true);
-	    */
 
     char fn[50];
     sprintf(fn,"graph_%dx%d_b%d",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap);
@@ -320,73 +385,21 @@ void GlobalStats::showStats(std::ostream & out )
     {
 	cout << "\n Cannot write output graphwiz file...";
     }
-
-
-    /*
-    digraph G {
-	graph [layout=dot]
-
-	{rank=same;
-	A;
-	B;
-	}
-	
-	{rank=same;
-	C;
-	D;
-	}
-
-	A -> B [dir=back, label="3.2"] 
-	A -> C [dir=both, label="2.1"]
-	C -> D [dir=forward, label="5.4"]
-	B -> D [dir=none, label="3.2"]
-
 }
-*/
-    /*
-    out << "% Total received packets: " << getReceivedPackets() << endl;
-    out << "% Total received flits: " << getReceivedFlits() << endl;
-    out << "% Global average delay (cycles): " << getAverageDelay() <<
-	endl;
-    out << "% Global average throughput (flits/cycle): " <<
-	getAverageThroughput() << endl;
-    //out << "% Throughput (flits/cycle/IP): " << getThroughput() << endl;
-    out << "% Max delay (cycles): " << getMaxDelay() << endl;
-    out << "% Total energy (J): " << getPower() << endl;
 
-    if (detailed) {
-	out << endl << "detailed = [" << endl;
-	for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
-	    for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
-		net->t[x][y]->r->stats.showStats(y *
-						 GlobalParams::
-						 mesh_dim_x + x, out,
-						 true);
-	out << "];" << endl;
+void GlobalStats::showStats(std::ostream & out )
+{
 
-	// show MaxDelay matrix
-	vector < vector < double > > md_mtx = getMaxDelayMtx();
+    generate_disr_stats();
+/*
+    out << " DiSR analytical results " << endl;
+    out << "--------------------------------------------------- " << endl;
+    out << "total nodes: " << DiSR_stats.total_nodes << endl;
+    out << "total links: " << DiSR_stats.total_links << endl; */
+    out << "% defective nodes: " << DiSR_stats.defective_nodes << endl;
+    out << "% nodes covered: " << DiSR_stats.covered_nodes << endl;
+    out << "% links covered: " << DiSR_stats.covered_links << endl;
+    out << "% node coverage: " << DiSR_stats.node_coverage << endl;
+    out << "% link coverage: " << DiSR_stats.link_coverage << endl;
 
-	out << endl << "max_delay = [" << endl;
-	for (unsigned int y = 0; y < md_mtx.size(); y++) {
-	    out << "   ";
-	    for (unsigned int x = 0; x < md_mtx[y].size(); x++)
-		out << setw(6) << md_mtx[y][x];
-	    out << endl;
-	}
-	out << "];" << endl;
-
-	// show RoutedFlits matrix
-	vector < vector < unsigned long > > rf_mtx = getRoutedFlitsMtx();
-
-	out << endl << "routed_flits = [" << endl;
-	for (unsigned int y = 0; y < rf_mtx.size(); y++) {
-	    out << "   ";
-	    for (unsigned int x = 0; x < rf_mtx[y].size(); x++)
-		out << setw(10) << rf_mtx[y][x];
-	    out << endl;
-	}
-	out << "];" << endl;
-    }
-    */
 }

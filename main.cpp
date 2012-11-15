@@ -80,6 +80,7 @@ int sc_main(int arg_num, char* arg_vet[])
 
   // Show statistics
   GlobalStats gs(n);
+  gs.drawGraphviz();
   gs.showStats(std::cout);
 
   return 0;
