@@ -28,13 +28,21 @@ GlobalStats::GlobalStats(const TNet * _net)
 
 void GlobalStats::generate_disr_stats()
 {
-    compute_disr_defective_nodes();
+    get_disr_defective_nodes();
+
     compute_disr_node_coverage();
     compute_disr_link_coverage();
+    /*
+    compute_disr_average_path_length();
+    compute_disr_average_link_weight();
+    compute_disr_unidirectional_turn_restrictions();
+    */
 }
 
-void GlobalStats::compute_disr_defective_nodes()
+void GlobalStats::get_disr_defective_nodes()
 {
+    // the input parameter is a probability of failure, this gets the actual
+    // number of defective nodes
     int defective = 0;
 
     for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
@@ -56,12 +64,23 @@ void GlobalStats::compute_disr_node_coverage()
     {
 	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
 	    if (net->t[x][y]->r->disr.isAssigned())
+	    {
 		covered++;
+		TSegmentId seg_id = net->t[x][y]->r->disr.getLocalSegmentID();
+		int node_id = net->t[x][y]->r->local_id;
+		this->DiSR_stats.segmentList[seg_id].push_back(node_id);
+		cout << "Adding node " << node_id << " to segment " << seg_id << endl;
+	    }
     }
 
     this->DiSR_stats.total_nodes = GlobalParams::mesh_dim_y * GlobalParams::mesh_dim_x;
     this->DiSR_stats.covered_nodes = covered;
     this->DiSR_stats.node_coverage = (double)covered/this->DiSR_stats.total_nodes;
+    this->DiSR_stats.nsegments = this->DiSR_stats.segmentList.size();
+    this->DiSR_stats.average_seg_length = covered/(double)(this->DiSR_stats.nsegments);
+
+
+
 }
 
 /* get the percentage of links covered/assigned by the DiSR 
@@ -391,15 +410,26 @@ void GlobalStats::showStats(std::ostream & out )
 {
 
     generate_disr_stats();
-/*
     out << " DiSR analytical results " << endl;
     out << "--------------------------------------------------- " << endl;
     out << "total nodes: " << DiSR_stats.total_nodes << endl;
-    out << "total links: " << DiSR_stats.total_links << endl; */
-    out << "% defective nodes: " << DiSR_stats.defective_nodes << endl;
-    out << "% nodes covered: " << DiSR_stats.covered_nodes << endl;
-    out << "% links covered: " << DiSR_stats.covered_links << endl;
+    out << "total links: " << DiSR_stats.total_links << endl; 
+    out << "defective nodes: " << DiSR_stats.defective_nodes << endl;
+    out << "nodes covered: " << DiSR_stats.covered_nodes << endl;
+    out << "links covered: " << DiSR_stats.covered_links << endl;
     out << "% node coverage: " << DiSR_stats.node_coverage << endl;
     out << "% link coverage: " << DiSR_stats.link_coverage << endl;
+    out << "number of segments: " << DiSR_stats.nsegments << endl;
+    out << "average segment length: " << DiSR_stats.average_seg_length<< endl;
 
+    map<TSegmentId, vector<int> >::const_iterator it;
+
+    for (it = DiSR_stats.segmentList.begin(); it!=DiSR_stats.segmentList.end(); ++it)
+    {
+	TSegmentId tmpid = it->first;
+	cout <<  "\n Segment " << tmpid << ": ";
+	for (unsigned int i = 0; i< DiSR_stats.segmentList[tmpid].size(); i++)
+	    cout << DiSR_stats.segmentList[tmpid][i] << " , ";
+
+    }
 }
