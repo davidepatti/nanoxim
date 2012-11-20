@@ -26,13 +26,14 @@ using namespace std;
 
 #define TMP_FILE_NAME        ".nanoxim_explorer.tmp"
 
-#define DEFECTIVE_NODES_LABEL   "% defective nodes:"
+#define DEFECTIVE_NODES_LABEL   "defective nodes:"
 #define NODE_COVERAGE_LABEL 	"% node coverage:"
 #define LINK_COVERAGE_LABEL	"% link coverage:"
+#define NUMBER_OF_SEG_LABEL	"number of segments:"
+#define AVERAGE_SEG_LENGTH_LABEL	"average segment length:"
 
 #define MATLAB_VAR_NAME      "data"
 #define MATRIX_COLUMN_WIDTH  15
-#define OUTPUTS_COL 2
 
 //---------------------------------------------------------------------------
 
@@ -62,6 +63,8 @@ struct TSimulationResults
 	int covered_links;
 	double node_coverage;
 	double link_coverage;
+	int nsegments;
+	double average_seg_length;
 };
 
 //---------------------------------------------------------------------------
@@ -502,7 +505,7 @@ bool PrintMatlabFunction(const string& mfname,
 			 ofstream& fout, 
 			 string& error_msg)
 {
-  fout << "function [node_coverage, link_coverage] = " << mfname << "(symbol)" << endl
+  fout << "function [node_coverage, link_coverage, nsegments, average_seg_length] = " << mfname << "(symbol)" << endl
        << endl;
 
   return true;
@@ -546,9 +549,27 @@ bool ReadResults(const string& fname,
 	  iss >> sres.link_coverage;
 	  continue;
 	}
+
+      pos = line.find(NUMBER_OF_SEG_LABEL);
+      if (pos != string::npos) 
+	{
+	  nread++;
+	  istringstream iss(line.substr(pos + string(NUMBER_OF_SEG_LABEL).size()));
+	  iss >> sres.nsegments;
+	  continue;
+	}
+
+      pos = line.find(AVERAGE_SEG_LENGTH_LABEL);
+      if (pos != string::npos) 
+	{
+	  nread++;
+	  istringstream iss(line.substr(pos + string(AVERAGE_SEG_LENGTH_LABEL).size()));
+	  iss >> sres.average_seg_length;
+	  continue;
+	}
     }
 
-  if (nread != 2)
+  if (nread != 4)
     {
       error_msg = "Output file " + fname + " corrupted";
       return false;
@@ -626,6 +647,8 @@ bool RunSimulations(double start_time,
       // Print results;
       fout << setw(MATRIX_COLUMN_WIDTH) << sres.node_coverage
 	   << setw(MATRIX_COLUMN_WIDTH) << sres.link_coverage
+	   << setw(MATRIX_COLUMN_WIDTH) << sres.nsegments
+	   << setw(MATRIX_COLUMN_WIDTH) << sres.average_seg_length
 	   << endl;
     }
 
@@ -644,12 +667,56 @@ bool PrintMatlabVariableBegin(const TParametersSpace& aggragated_params_space,
     fout << setw(MATRIX_COLUMN_WIDTH) << i->first;
 
   fout << setw(MATRIX_COLUMN_WIDTH) << "node_coverage"
-       << setw(MATRIX_COLUMN_WIDTH) << "link_coverage";
+       << setw(MATRIX_COLUMN_WIDTH) << "link_coverage"
+       << setw(MATRIX_COLUMN_WIDTH) << "nsegments"
+       << setw(MATRIX_COLUMN_WIDTH) << "average_seg_length";
 
   fout << endl;
 
   return true;
 }
+// -------------------------------------------------------------------------------
+// DiSR specific matlab code
+// - less general code, just a quick and readable disr specific matlab code
+bool GenDiSRMatlabCode( ofstream& fout, string& error_msg)
+{
+    // number of output variables generated
+    int out_col = 2;
+
+  fout << "data_node_coverage = [];" << endl
+       << "for i = 1:rows," << endl
+       << "   tmp = " << MATLAB_VAR_NAME << "(i, cols-" << out_col <<"+1);" << endl
+       << "   data_node_coverage  = [data_node_coverage; " << MATLAB_VAR_NAME << "(i, 1:cols-"<<out_col<<"), tmp];" << endl
+       << "end" << endl
+       << endl;
+
+  fout << "figure(1);" << endl
+       << "hold on;" << endl
+       << "plot(data_node_coverage(:,1), data_node_coverage(:,2), '-xb');" << endl
+       << "ylim([0 1])" << endl
+       << "xlabel('bootstrap node')" << endl
+       << "ylabel('data_node_coverage')" << endl
+       << endl;
+
+  fout << "data_link_coverage = [];" << endl
+       << "for i = 1:rows," << endl
+       << "   tmp = " << MATLAB_VAR_NAME << "(i, cols-" << out_col <<"+2);" << endl
+       << "   data_link_coverage  = [data_link_coverage; " << MATLAB_VAR_NAME << "(i, 1:cols-"<<out_col<<"), tmp];" << endl
+       << "end" << endl
+       << endl;
+
+  //fout << "figure(2);" << endl
+       fout << "hold on;" << endl
+       << "plot(data_link_coverage(:,1), data_link_coverage(:,2), '-or');" << endl
+       << "ylim([0 1])" << endl
+       << "xlabel('bootstrap node')" << endl
+       << "ylabel('data_link_coverage')" << endl
+       << endl;
+
+  return true;
+}
+
+//---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
 
@@ -658,7 +725,7 @@ bool GenMatlabCode(const string& var_name,
 		   const int repetitions, const int column,
 		   ofstream& fout, string& error_msg)
 {
-    int out_col = OUTPUTS_COL;
+    int out_col = 2;
 
   fout << var_name << " = [];" << endl
        << "for i = 1:rows/" << repetitions << "," << endl
@@ -676,6 +743,7 @@ bool GenMatlabCode(const string& var_name,
        << "hold on;" << endl
        << "plot(" << var_name << "(:,1), " << var_name << "(:,2), symbol);" << endl
        << "ylim([0 1])" << endl
+       << "xlabel('bootstrap node')" << endl
        << "ylabel('"<<var_name<<"')" << endl
        << endl;
 
@@ -719,6 +787,9 @@ bool PrintMatlabVariableEnd(const int repetitions,
        << "cols = size(" << MATLAB_VAR_NAME << ", 2);" << endl
        << endl;
 
+  if (!GenDiSRMatlabCode(fout, error_msg))
+    return false;
+  /*
   if (!GenMatlabCode(string(MATLAB_VAR_NAME) + "_node_coverage", 2,
 		     repetitions, 1, fout, error_msg))
     return false;
@@ -727,6 +798,7 @@ bool PrintMatlabVariableEnd(const int repetitions,
 		     repetitions, 2, fout, error_msg))
     return false;
 
+    */
   return true;
 }
 
