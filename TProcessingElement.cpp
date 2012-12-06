@@ -102,7 +102,7 @@ TPacket TProcessingElement::nextPacket()
 bool TProcessingElement::canShot(TPacket& packet)
 {
     bool   shot = false;
-    double threshold;
+    //double threshold;
     // TODO: just to set the rate for testing...
     int rate = 100000;
 
@@ -145,7 +145,7 @@ TPacket TProcessingElement::trafficRandom()
 {
   TPacket p;
   p.src_id = local_id;
-  double range_start = 0.0;
+  //double range_start = 0.0;
 
   //cout << "\n " << sc_time_stamp().to_double()/1000 << " PE " << local_id << " rnd = " << rnd << endl;
 

@@ -43,6 +43,7 @@ int   GlobalParams::rnd_generator_seed               = 0;
 int   GlobalParams::disr               = DEFAULT_DISR_SETUP;
 int   GlobalParams::bootstrap               = DEFAULT_DISR_BOOTSTRAP_NODE;
 int   GlobalParams::bootstrap_timeout               = DEFAULT_BOOTSTRAP_TIMEOUT;
+int   GlobalParams::cyclelinks               = DEFAULT_CYCLE_LINKS;
 
 //---------------------------------------------------------------------------
 
