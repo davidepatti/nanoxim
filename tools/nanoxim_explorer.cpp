@@ -64,7 +64,7 @@ struct TSimulationResults
 	double node_coverage;
 	double link_coverage;
 	int nsegments;
-	double average_seg_length;
+	double avg_seg_length;
 };
 
 //---------------------------------------------------------------------------
@@ -505,7 +505,7 @@ bool PrintMatlabFunction(const string& mfname,
 			 ofstream& fout, 
 			 string& error_msg)
 {
-  fout << "function [node_coverage, link_coverage, nsegments, average_seg_length] = " << mfname << "(symbol)" << endl
+  fout << "function [node_coverage, link_coverage, nsegments, avg_seg_length] = " << mfname << "(symbol)" << endl
        << endl;
 
   return true;
@@ -564,7 +564,7 @@ bool ReadResults(const string& fname,
 	{
 	  nread++;
 	  istringstream iss(line.substr(pos + string(AVERAGE_SEG_LENGTH_LABEL).size()));
-	  iss >> sres.average_seg_length;
+	  iss >> sres.avg_seg_length;
 	  continue;
 	}
     }
@@ -648,7 +648,7 @@ bool RunSimulations(double start_time,
       fout << setw(MATRIX_COLUMN_WIDTH) << sres.node_coverage
 	   << setw(MATRIX_COLUMN_WIDTH) << sres.link_coverage
 	   << setw(MATRIX_COLUMN_WIDTH) << sres.nsegments
-	   << setw(MATRIX_COLUMN_WIDTH) << sres.average_seg_length
+	   << setw(MATRIX_COLUMN_WIDTH) << sres.avg_seg_length
 	   << endl;
     }
 
@@ -669,7 +669,7 @@ bool PrintMatlabVariableBegin(const TParametersSpace& aggragated_params_space,
   fout << setw(MATRIX_COLUMN_WIDTH) << "node_coverage"
        << setw(MATRIX_COLUMN_WIDTH) << "link_coverage"
        << setw(MATRIX_COLUMN_WIDTH) << "nsegments"
-       << setw(MATRIX_COLUMN_WIDTH) << "average_seg_length";
+       << setw(MATRIX_COLUMN_WIDTH) << "avg_seg_length";
 
   fout << endl;
 
@@ -681,7 +681,7 @@ bool PrintMatlabVariableBegin(const TParametersSpace& aggragated_params_space,
 bool GenDiSRMatlabCode( ofstream& fout, string& error_msg)
 {
     // number of output variables generated
-    int out_col = 2;
+    int out_col = 4;
 
   fout << "data_node_coverage = [];" << endl
        << "for i = 1:rows," << endl
@@ -698,6 +698,7 @@ bool GenDiSRMatlabCode( ofstream& fout, string& error_msg)
        << "ylabel('data_node_coverage')" << endl
        << endl;
 
+  /////////////////////////////////////////////////////////////////////////
   fout << "data_link_coverage = [];" << endl
        << "for i = 1:rows," << endl
        << "   tmp = " << MATLAB_VAR_NAME << "(i, cols-" << out_col <<"+2);" << endl
@@ -713,6 +714,37 @@ bool GenDiSRMatlabCode( ofstream& fout, string& error_msg)
        << "ylabel('data_link_coverage')" << endl
        << endl;
 
+  /////////////////////////////////////////////////////////////////////////
+  fout << "data_nsegments = [];" << endl
+       << "for i = 1:rows," << endl
+       << "   tmp = " << MATLAB_VAR_NAME << "(i, cols-" << out_col <<"+3);" << endl
+       << "   data_nsegments  = [data_nsegments; " << MATLAB_VAR_NAME << "(i, 1:cols-"<<out_col<<"), tmp];" << endl
+       << "end" << endl
+       << endl;
+
+  fout << "figure(2);" << endl
+       << "hold on;" << endl
+       << "plot(data_nsegments(:,1), data_nsegments(:,2), '-xb');" << endl
+//       << "ylim([0 1])" << endl
+       << "xlabel('bootstrap node')" << endl
+       << "ylabel('data_nsegments')" << endl
+       << endl;
+  /////////////////////////////////////////////////////////////////////////
+  fout << "data_avg_seg_length = [];" << endl
+       << "for i = 1:rows," << endl
+       << "   tmp = " << MATLAB_VAR_NAME << "(i, cols-" << out_col <<"+4);" << endl
+       << "   data_avg_seg_length  = [data_avg_seg_length; " << MATLAB_VAR_NAME << "(i, 1:cols-"<<out_col<<"), tmp];" << endl
+       << "end" << endl
+       << endl;
+
+  fout << "figure(3);" << endl
+       << "hold on;" << endl
+       << "plot(data_avg_seg_length(:,1), data_avg_seg_length(:,2), '-xb');" << endl
+       //<< "ylim([0 1])" << endl
+       << "xlabel('bootstrap node')" << endl
+       << "ylabel('data_avg_seg_length')" << endl
+       << endl;
+  /////////////////////////////////////////////////////////////////////////
   return true;
 }
 

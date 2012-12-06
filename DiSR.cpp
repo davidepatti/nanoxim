@@ -114,7 +114,7 @@ void DiSR::setStatus(const DiSR_status& new_status)
 void DiSR::setLinks(int type, const vector<int>& directions,const TSegmentId& id)
 {
 
-    for (int i = 0;i<directions.size();i++)
+    for (unsigned int i = 0;i<directions.size();i++)
     {
 	if (type==TVISITED)
 	    link_tvisited[directions[i]] = id;
@@ -687,19 +687,55 @@ void DiSR::set_request_path(int path)
 
 int DiSR::next_free_link()
 {
-    //cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] ...";
-    while (current_link<DIRECTION_LOCAL)
+    //cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] ..." << endl;
+    if (GlobalParams::cyclelinks)
     {
+	bool stop = false;
 
-	if ( (link_visited[current_link].isFree()) && (link_tvisited[current_link].isFree()))
+	if (current_link==DIRECTION_LOCAL) current_link=DIRECTION_NORTH;
+	int start = current_link;
+
+	while (!stop)
 	{
-	    cout << "found free link " << current_link <<  endl;
 
-	    return current_link++;
+	    cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] analyzing DIR " << current_link << endl;
+
+
+	    if ( (link_visited[current_link].isFree()) && (link_tvisited[current_link].isFree()))
+	    {
+		cout << "found free link " << current_link <<  endl;
+
+		return current_link++;
+	    }
+	    current_link++;
+
+	    if (current_link==DIRECTION_LOCAL) 
+	    {
+		//cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] re-starting cycle... " << current_link << endl;
+		current_link=DIRECTION_NORTH;
+	    }
+	    if (current_link==start)
+	    {
+		cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] stopping cycle at " << current_link << endl;
+		stop = true;
+	    }
 	}
-	current_link++;
     }
+    else
+    {
+	while (current_link<DIRECTION_LOCAL)
+	{
+
+	    if ( (link_visited[current_link].isFree()) && (link_tvisited[current_link].isFree()))
+	    {
+		cout << "found free link " << current_link <<  endl;
+
+		return current_link++;
+	    }
+	    current_link++;
+	}
     //cout << "no link found! " << endl;
+    }
 
     return NOT_VALID;
 }
@@ -711,6 +747,48 @@ int DiSR::has_free_link() const
 {
     //cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] ...";
     int tmp_link = current_link;
+
+    if (GlobalParams::cyclelinks)
+    {
+	bool stop = false;
+
+	if (tmp_link==DIRECTION_LOCAL) 
+	{
+	//    cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] re-starting cycle ... "  << endl;
+	    tmp_link=DIRECTION_NORTH;
+	}
+
+	int start = tmp_link;
+
+	cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] starting cycle from DIR " << start << endl;
+
+	while (!stop)
+	{
+	    cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] analyzing DIR " << tmp_link << endl;
+
+
+	    if ( (link_visited[tmp_link].isFree()) && (link_tvisited[tmp_link].isFree()))
+	    {
+		cout << "found free link " << tmp_link <<  endl;
+
+		return tmp_link;
+	    }
+	    tmp_link++;
+
+	    if (tmp_link==DIRECTION_LOCAL) 
+	    {
+	        //cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] re-starting cycle ... "  << endl;
+		tmp_link=DIRECTION_NORTH;
+	    }
+
+	    if (tmp_link==start)
+	    {
+		cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] stopping cycle at " << tmp_link << endl;
+		stop = true;
+	    }
+	}
+    }
+    else
 
     while (tmp_link<DIRECTION_LOCAL)
     {
