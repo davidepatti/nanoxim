@@ -246,7 +246,7 @@ class DiSR
 
     private:
   int next_free_link();
-  int has_free_link() const;
+  bool has_free_link() const;
   bool sanity_check();
   void print_status() const;
   void bootstrap_node();

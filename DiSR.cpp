@@ -411,19 +411,19 @@ int DiSR::process(TPacket& p)
 	    }
 	    
 	}
-	// the packet returned to its orginal source
+	// the request packet returned to its original source
+	// must cancel the request
 	else if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
-	    cout << "[node "<< router->local_id <<  "] CRITICAL, local segID " << this->segID << ", packet  "<< packet_segment_id << " from " << p.dir_in << " with p.src_id " << p.src_id << endl;
-	    assert(false);
-	    // TODO: can this happen ?
-	    /*
-	    this->segID = packet_segment_id;
-	    cout << "[node "<<router->local_id<<"] DiSR::process() confirming STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
-	    setStatus(ASSIGNED);
-	    generate_confirm_starting_segment(p);
-	    */
-	    return ACTION_SKIP; 
+	    // trivial sanity check, since it's a request originated from this node...
+	    //assert(this->segID==packet_segment_id);
+
+	    cout << "[node "<< router->local_id <<  "] DiSR::process() CANDIDATE with same id, discarding request"<< packet_segment_id << " from " << p.dir_in << ", current node is the request issuer! " << endl;
+
+	    // the incoming direction becomes free
+	    free_direction(p.dir_in);
+	    generate_segment_cancel(p);
+	    return ACTION_CANCEL_REQUEST;
 	}
     }
 
@@ -743,9 +743,9 @@ int DiSR::next_free_link()
 
 // TODO: what happen if link status changes between two has/next free
 // link function calls
-int DiSR::has_free_link() const
+bool DiSR::has_free_link() const
 {
-    //cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] ...";
+    cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] ...";
     int tmp_link = current_link;
 
     if (GlobalParams::cyclelinks)
@@ -771,7 +771,7 @@ int DiSR::has_free_link() const
 	    {
 		cout << "found free link " << tmp_link <<  endl;
 
-		return tmp_link;
+		return true;
 	    }
 	    tmp_link++;
 
@@ -796,11 +796,11 @@ int DiSR::has_free_link() const
 	if ( (link_visited[tmp_link].isFree()) && (link_tvisited[tmp_link].isFree()))
 	{
 	    cout << "found free link " << tmp_link <<  endl;
-	    return tmp_link;
+	    return true;
 	}
 	tmp_link++;
     }
-    //cout << "no link found! " << endl;
+    cout << "no link found! " << endl;
 
     return false;
 }
@@ -849,6 +849,8 @@ void DiSR::print_status() const
 // Dynamic Behaviour Status (DBS)
 void DiSR::update_status()
 {
+    //cout << "[node "<<router->local_id<<"] DiSR::update_status()... " << endl;
+    //print_status();
     // TODO: put here some timer-like stuff ?
     if (this->status==BOOTSTRAP)
 	bootstrap_node();
