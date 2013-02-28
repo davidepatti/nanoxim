@@ -19,6 +19,9 @@ using namespace std;
 #define DIRECTION_WEST         3
 #define DIRECTION_LOCAL        4
 
+#define NO_LINK -2
+#define CYCLE_TIMEOUT -3
+
 // ACTIONS
 // flood all available out directions, ignore packet, confirm requests
 #define ACTION_FLOOD    100
@@ -67,7 +70,7 @@ using namespace std;
 #define DEFAULT_DISR_SETUP			     0
 #define DEFAULT_DISR_BOOTSTRAP_NODE		     0
 #define DEFAULT_BOOTSTRAP_TIMEOUT	          1000 
-#define DEFAULT_CYCLE_LINKS			0
+#define DEFAULT_CYCLE_LINKS			1
 
 // TODO by Fafa - this MUST be removed!!!
 #define MAX_STATIC_DIM 20
@@ -246,6 +249,7 @@ class DiSR
 
     private:
   int next_free_link();
+  void reset_cyclelinks();
   bool has_free_link() const;
   bool sanity_check();
   void print_status() const;
@@ -254,7 +258,6 @@ class DiSR
   void generate_segment_confirm(TPacket&);
   void generate_segment_cancel(TPacket&);
   void start_investigate_links();
-  void continue_investigate_links();
 
   void set_request_path(int);
 
@@ -272,10 +275,13 @@ class DiSR
   //bool starting;
   bool terminal;
   int subnet;
-  int current_link;
   TRouter * router;
 
   int bootstrap_timeout;
+
+  int current_link;
+  int cycle_start;
+  int cyclelinks_timeout;
 
   DiSR_status status;
   

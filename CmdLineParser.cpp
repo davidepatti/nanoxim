@@ -18,7 +18,7 @@ void showHelp(char selfname[])
   cout << "\t-disr - Run setup for distribuited Segment-base Routing" << endl;
   cout << "\t-bootstrap N - use node N as bootstrap node for Segment-base Routing" << endl;
   cout << "\t-bootstrap_timeout N - used in DiSR Segment-base Routing" << endl;
-  cout << "\t-cyclelinks - always cycle when searching free links in DiSR" << endl;
+  cout << "\t-cyclelinks N - cycle N times when searching free links in DiSR (0=unlimited, default=1)" << endl;
 }
 
 //---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ void parseCmdLine(int arg_num, char *arg_vet[])
       else if (!strcmp(arg_vet[i], "-bootstrap_timeout"))
 	GlobalParams::bootstrap_timeout = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-cyclelinks"))
-	GlobalParams::cyclelinks = 1;
+	GlobalParams::cyclelinks = atoi(arg_vet[++i]); 
       else 
       {
 	cerr << "Error: Invalid option: " << arg_vet[i] << endl;

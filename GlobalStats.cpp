@@ -326,6 +326,8 @@ void GlobalStats::drawGraphviz()
 
     char fn[50];
     sprintf(fn,"graph_%dx%d_b%d",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap);
+    if (GlobalParams::cyclelinks)
+	strcat(fn,"_cyclelinks");
 
     if ( (fp = fopen(strcat(fn,".gv"),"w"))!= NULL)
     {
