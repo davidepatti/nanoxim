@@ -59,16 +59,16 @@ void TReservationTable::reserve(const int port_in, const vector<int>& port_out)
     // reservation of reserved/not valid ports is illegal. Correctness
     // should be assured by TReservationTable users
 
-    for (int j=0;j<port_out.size();j++)
+    for (unsigned int j=0;j<port_out.size();j++)
 	assert(isAvailable(port_out[j]));
 
     // check for previous reservation to be released
   vector<int> ports = getMultiOutputPort(port_in);
 
-  for (int j=0;j<ports.size();j++)
+  for (unsigned int j=0;j<ports.size();j++)
       if (ports[j]!=NOT_RESERVED) release(ports[j]);
 
-  for (int j=0;j<port_out.size();j++)
+  for (unsigned int j=0;j<port_out.size();j++)
       rtable[port_out[j]] = port_in;
 }
 
