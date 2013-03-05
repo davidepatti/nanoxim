@@ -153,8 +153,10 @@ double Stats::getCommunicationEnergy(int src_id, int dst_id)
     TCoord src_coord = id2Coord(src_id);
     TCoord dst_coord = id2Coord(dst_id);
 
+    /*
     int hops =
 	abs(src_coord.x - dst_coord.x) + abs(src_coord.y - dst_coord.y);
+	*/
 
     /*
     double energy =

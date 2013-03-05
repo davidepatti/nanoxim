@@ -28,7 +28,6 @@ GlobalStats::GlobalStats(const TNet * _net)
 
 void GlobalStats::generate_disr_stats()
 {
-    get_disr_defective_nodes();
 
     compute_disr_node_coverage();
     compute_disr_link_coverage();
@@ -37,20 +36,6 @@ void GlobalStats::generate_disr_stats()
     compute_disr_average_link_weight();
     compute_disr_unidirectional_turn_restrictions();
     */
-}
-
-void GlobalStats::get_disr_defective_nodes()
-{
-    // the input parameter is a probability of failure, this gets the actual
-    // number of defective nodes
-    int defective = 0;
-
-    for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
-    {
-	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
-	    if (net->t[x][y]->r->disr.isAssigned());
-    }
-    this->DiSR_stats.defective_nodes = defective;
 }
 
 /* get the percentage of nodes covered/assigned by the DiSR 
@@ -90,6 +75,7 @@ void GlobalStats::compute_disr_link_coverage()
 {
     int covered = 0;
     int total_links = 0;
+    int defective = 0 ;
 
     // horizontal edges...
     for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
@@ -103,6 +89,9 @@ void GlobalStats::compute_disr_link_coverage()
 		TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_EAST);
 		if (tid.isAssigned())
 		    covered++;
+
+		if (!(tid.isValid()) )
+		    defective++;
 
 	    }
 	}
@@ -119,6 +108,9 @@ void GlobalStats::compute_disr_link_coverage()
 		TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_SOUTH);
 		if (tid.isAssigned())
 		    covered++;
+
+		if (!(tid.isValid()) )
+		    defective++;
 	    }
 	}
     }
@@ -126,6 +118,8 @@ void GlobalStats::compute_disr_link_coverage()
     this->DiSR_stats.total_links = total_links;
     this->DiSR_stats.covered_links = covered;
     this->DiSR_stats.link_coverage = (double)covered/total_links;
+    this->DiSR_stats.defective_nodes = defective;
+    this->DiSR_stats.working_link_coverage = (double)covered/(total_links-defective);
 }
 
 
@@ -419,8 +413,9 @@ void GlobalStats::showStats(std::ostream & out )
     out << "defective nodes: " << DiSR_stats.defective_nodes << endl;
     out << "nodes covered: " << DiSR_stats.covered_nodes << endl;
     out << "links covered: " << DiSR_stats.covered_links << endl;
-    out << "% node coverage: " << DiSR_stats.node_coverage << endl;
-    out << "% link coverage: " << DiSR_stats.link_coverage << endl;
+    out << "node coverage: " << DiSR_stats.node_coverage << endl;
+    out << "link coverage: " << DiSR_stats.link_coverage << endl;
+    out << "working link coverage: " << DiSR_stats.working_link_coverage << endl;
     out << "number of segments: " << DiSR_stats.nsegments << endl;
     out << "average segment length: " << DiSR_stats.average_seg_length<< endl;
 
