@@ -85,8 +85,6 @@ class GlobalStats {
     void compute_disr_node_coverage();
     /*  percentage of nodes covered/assigned by the DiSR */
     void compute_disr_link_coverage();
-    /*  actual number of defective nodes */
-    void get_disr_defective_nodes();
 
     struct 
     {
@@ -97,6 +95,7 @@ class GlobalStats {
 	int covered_links;
 	double node_coverage;
 	double link_coverage;
+	double working_link_coverage;
 	map<TSegmentId,vector<int> > segmentList;
 	int nsegments;
 	double average_seg_length;

@@ -71,6 +71,7 @@ using namespace std;
 #define DEFAULT_DISR_BOOTSTRAP_NODE		     0
 #define DEFAULT_BOOTSTRAP_TIMEOUT	          1000 
 #define DEFAULT_CYCLE_LINKS			1
+#define DEFAULT_DEFECTIVE_LINKS			0
 
 // TODO by Fafa - this MUST be removed!!!
 #define MAX_STATIC_DIM 20
@@ -99,6 +100,7 @@ struct GlobalParams
   static int bootstrap;
   static int bootstrap_timeout;
   static int cyclelinks;
+  static double defective;
 };
 
 

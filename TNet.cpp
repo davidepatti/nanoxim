@@ -86,12 +86,13 @@ void TNet::buildMesh()
 
     }
 
-  // invalidate reservation table entries for non-exhistent channels
+  // invalidate reservation table and disr entries for non-exhistent channels
   for(int i=0; i<GlobalParams::mesh_dim_x; i++)
     {
       t[i][0]->r->reservation_table.invalidate(DIRECTION_NORTH);
       t[i][GlobalParams::mesh_dim_y-1]->r->reservation_table.invalidate(DIRECTION_SOUTH);
 
+      // disr
       t[i][0]->r->disr.invalidate_direction(DIRECTION_NORTH);
       t[i][GlobalParams::mesh_dim_y-1]->r->disr.invalidate_direction(DIRECTION_SOUTH);
     }
@@ -100,9 +101,54 @@ void TNet::buildMesh()
       t[0][j]->r->reservation_table.invalidate(DIRECTION_WEST);
       t[GlobalParams::mesh_dim_x-1][j]->r->reservation_table.invalidate(DIRECTION_EAST);
 
+      // disr
       t[0][j]->r->disr.invalidate_direction(DIRECTION_WEST);
       t[GlobalParams::mesh_dim_x-1][j]->r->disr.invalidate_direction(DIRECTION_EAST);
     }
+
+  // invalidate reservation table and disr entries for defective channels
+  
+  if (GlobalParams::defective)
+  {
+      bool do_defect;
+
+	for (int i=0; i<GlobalParams::mesh_dim_y; i++)
+	{
+	    for (int j=0; j<GlobalParams::mesh_dim_x-1; j++)
+	    {
+		cout << "Analyzing horizonal links, node " << (t[j][i]->r->local_id) << endl;
+		do_defect = (((double) rand()) / RAND_MAX < GlobalParams::defective);
+
+		if (do_defect)
+		{
+		    cout << "found link defect " << endl;
+		    t[j][i]->r->disr.invalidate_direction(DIRECTION_EAST);
+		    t[j+1][i]->r->disr.invalidate_direction(DIRECTION_WEST);
+		    
+		    t[j][i]->r->reservation_table.invalidate(DIRECTION_EAST);
+		    t[j+1][i]->r->reservation_table.invalidate(DIRECTION_WEST);
+		}
+	    }
+	}
+      for (int i=0; i<GlobalParams::mesh_dim_x; i++)
+      {
+	for (int j=0; j<GlobalParams::mesh_dim_y-1; j++)
+	{
+		cout << "Analyzing vertical links, node " << (t[i][j]->r->local_id) << endl;
+		do_defect = (((double) rand()) / RAND_MAX < GlobalParams::defective);
+
+		if (do_defect)
+		{
+		    cout << "found link defect " << endl;
+		    t[i][j]->r->disr.invalidate_direction(DIRECTION_SOUTH);
+		    t[i][j+1]->r->disr.invalidate_direction(DIRECTION_NORTH);
+		    
+		    t[i][j]->r->reservation_table.invalidate(DIRECTION_SOUTH);
+		    t[i][j+1]->r->reservation_table.invalidate(DIRECTION_NORTH);
+		}
+	}
+      }
+  }
 
 }
 

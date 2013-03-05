@@ -39,11 +39,12 @@ int   GlobalParams::buffer_depth                     = DEFAULT_BUFFER_DEPTH;
 int   GlobalParams::routing_algorithm                = ROUTING_XY;
 int   GlobalParams::verbose_mode		      = DEFAULT_VERBOSE_MODE;
 int   GlobalParams::simulation_time		      = DEFAULT_SIMULATION_TIME;
-int   GlobalParams::rnd_generator_seed               = 0;
+int   GlobalParams::rnd_generator_seed               = time(NULL);
 int   GlobalParams::disr               = DEFAULT_DISR_SETUP;
 int   GlobalParams::bootstrap               = DEFAULT_DISR_BOOTSTRAP_NODE;
 int   GlobalParams::bootstrap_timeout               = DEFAULT_BOOTSTRAP_TIMEOUT;
 int   GlobalParams::cyclelinks               = DEFAULT_CYCLE_LINKS;
+double   GlobalParams::defective		     = 0;
 
 //---------------------------------------------------------------------------
 
