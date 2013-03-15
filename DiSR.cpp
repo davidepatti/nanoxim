@@ -684,7 +684,9 @@ int DiSR::process(TPacket& p)
 
 void DiSR::set_request_path(int path)
 {
+#ifdef VERBOSE
     cout << "[node "<<router->local_id<<"] DiSR::set_request_path() to " << path <<  endl;
+#endif
     this->request_path = path;
 }
 
@@ -694,7 +696,7 @@ void DiSR::reset_cyclelinks()
     this->cyclelinks_timeout = GlobalParams::cyclelinks;
     this->cycle_start = 0;
     this->current_link = 0;
-    cout << "[DiSR::reset_cyclelinks() on  "<<router->local_id<<"], setting cycle_start =  " << current_link << endl;
+    cout << "[node "<<router->local_id<<"] DiSR::reset_cyclelinks() setting cycle_start =  " << current_link << endl;
 }
 
 
@@ -705,7 +707,7 @@ int DiSR::next_free_link()
 	//cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] re-starting cycle... " << current_link << endl;
 	current_link=DIRECTION_NORTH;
     }
-    cout << "[DiSR::next_free_link() on  "<< router->local_id<< "], start = " << cycle_start << ", curr="<<current_link << endl;
+    cout << "[node "<<router->local_id<<"] DiSR::next_free_link() start = " << cycle_start << ", curr="<<current_link << endl;
 
     // new Semantic:
     //
@@ -719,14 +721,14 @@ int DiSR::next_free_link()
 
     if (this->cyclelinks_timeout==0)
     {
-	cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] CYCLE_TIMEOUT !" << endl;
+	cout << "[node "<<router->local_id<<"] DiSR::next_free_link() CYCLE_TIMEOUT " << endl;
 	reset_cyclelinks();
 	return CYCLE_TIMEOUT;
     }
 
     while (!stop)
     {
-	cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] analyzing DIR " << current_link << endl;
+	cout << "[node "<<router->local_id<<"] DiSR::next_free_link() analyzing direction " << current_link << endl;
 
 	if ( (link_visited[current_link].isFree()) && (link_tvisited[current_link].isFree()))
 	{
@@ -745,7 +747,7 @@ int DiSR::next_free_link()
 	if (current_link==cycle_start)
 	{
 	    this->cyclelinks_timeout--;
-	    cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] completed cycle at next dir " << current_link << ", timeout "<<cyclelinks_timeout<<"/"<<GlobalParams::cyclelinks<<endl;
+	    cout << "[node "<<router->local_id<<"] DiSR::next_free_link() completed cycle at next dir " << current_link << ", timeout "<<cyclelinks_timeout<<"/"<<GlobalParams::cyclelinks<<endl;
 	    stop = true;
 	} 
     }
@@ -759,7 +761,6 @@ int DiSR::next_free_link()
 // TOTOD: check if useless
 bool DiSR::has_free_link() const
 {
-    cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] ...";
     int tmp_link = current_link;
 
     bool stop = false;
@@ -768,16 +769,18 @@ bool DiSR::has_free_link() const
 
     int start = tmp_link;
 
-    cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] starting cycle from DIR " << start << endl;
-
     while (!stop)
     {
-	cout << "[DiSR::has_free_link() on  "<<router->local_id<<"] analyzing DIR " << tmp_link << endl;
+#ifdef VERBOSE
+	cout << "[node "<<router->local_id<<"] DiSR::has_free_link() analyzing direction " << tmp_link << endl;
+#endif
 
 
 	if ( (link_visited[tmp_link].isFree()) && (link_tvisited[tmp_link].isFree()))
 	{
+#ifdef VERBOSE
 	    cout << "found free link " << tmp_link <<  endl;
+#endif
 
 	    return true;
 	}
@@ -787,13 +790,16 @@ bool DiSR::has_free_link() const
 
 	if (tmp_link==start) stop = true;
     }
+#ifdef VERBOSE
     cout << "no link found! " << endl;
+#endif
 
     return false;
 }
 
 void DiSR::print_status() const
 {
+#ifdef VERBOSE
     if (this->router!=NULL)
     {
 	switch (this->status) {
@@ -829,6 +835,7 @@ void DiSR::print_status() const
 		cout << "[node "<<router->local_id<<"] print_status:  ERROR, router not set" << endl;
     }
 
+#endif
 	    
 
 }

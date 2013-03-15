@@ -27,8 +27,8 @@ using namespace std;
 #define TMP_FILE_NAME        ".nanoxim_explorer.tmp"
 
 #define DEFECTIVE_NODES_LABEL   "defective nodes:"
-#define NODE_COVERAGE_LABEL 	"% node coverage:"
-#define LINK_COVERAGE_LABEL	"% link coverage:"
+#define NODE_COVERAGE_LABEL 	"node coverage:"
+#define LINK_COVERAGE_LABEL	"link coverage:"
 #define NUMBER_OF_SEG_LABEL	"number of segments:"
 #define AVERAGE_SEG_LENGTH_LABEL	"average segment length:"
 
@@ -571,6 +571,7 @@ bool ReadResults(const string& fname,
 
   if (nread != 4)
     {
+	cout << "\n nread = " << nread;
       error_msg = "Output file " + fname + " corrupted";
       return false;
     }
