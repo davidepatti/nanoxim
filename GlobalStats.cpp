@@ -415,7 +415,7 @@ void GlobalStats::showStats(std::ostream & out )
     out << "links covered: " << DiSR_stats.covered_links << endl;
     out << "node coverage: " << DiSR_stats.node_coverage << endl;
     out << "link coverage: " << DiSR_stats.link_coverage << endl;
-    out << "working link coverage: " << DiSR_stats.working_link_coverage << endl;
+    out << "working coverage: " << DiSR_stats.working_link_coverage << endl;
     out << "number of segments: " << DiSR_stats.nsegments << endl;
     out << "average segment length: " << DiSR_stats.average_seg_length<< endl;
 

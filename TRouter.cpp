@@ -105,7 +105,7 @@ void TRouter::txProcess()
 		// broadcast required //////////////////////////
 		if (process_out[i] == ACTION_FLOOD)
 		{
-		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_FLOOD [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_FLOOD [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		    vector<int> directions;
 
 		    //  broadcast should not send to the following directions:
@@ -128,17 +128,17 @@ void TRouter::txProcess()
 		}
 		else if (process_out[i]==ACTION_SKIP)
 		{
-		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_SKIP [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_SKIP [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		    //TODO: take some action in reservation phase ?
 		}
 		else if (process_out[i]==ACTION_DISCARD)
 		{
-		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_DISCARD [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_DISCARD [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		    //TODO: take some action in reservation phase ?
 		}
 		else  if (process_out[i]==ACTION_END_CONFIRM)
 		{
-		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_END_CONFIRM [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_END_CONFIRM [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		}
 
 		// not control mode, just reserve a direction
@@ -151,34 +151,34 @@ void TRouter::txProcess()
 		}
 		else if (process_out[i]==ACTION_CONFIRM)
 		{
-		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_CONFIRM [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_CONFIRM [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  // a confirmation packet has been injected in the local buffer that will be processed on next cycle
 		  process_out[DIRECTION_LOCAL] = ACTION_SKIP;
 		}
 		else if (process_out[i]==NOT_VALID)
 		{
-		  cout << "[node " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: WARNING, process["<<i<<"] =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		    assert(false);
 		}
 		else if (process_out[i]==ACTION_CANCEL_REQUEST)
 		{
-		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_CANCEL_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_CANCEL_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  // Similar to confirmation packet, a cancel packet has been injected in the local buffer that will be processed on next cycle
 		  process_out[DIRECTION_LOCAL] = ACTION_SKIP;
 		}
 		else  if (process_out[i]==ACTION_END_CANCEL)
 		{
-		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_END_CANCEL [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_END_CANCEL [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		}
 		else  if (process_out[i]==ACTION_RETRY_REQUEST)
 		{
-		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_RETRY_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_RETRY_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  // a new packet has been injected in the local buffer that will be processed on next cycle
 		  process_out[DIRECTION_LOCAL] = ACTION_SKIP;
 		}
 		else 
 		{
-		  cout << "[node " << local_id << "]: CRITICAL, UNSUPPORTED process("<<i<<") =  " << process_out[i] << " [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: CRITICAL, UNSUPPORTED process["<<i<<"] =  " << process_out[i] << " [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		    assert(false);
 		}
 	    }
@@ -190,8 +190,9 @@ void TRouter::txProcess()
       {
 	  if ( !buffer[i].IsEmpty() )
 	  {
+#ifdef VERBOSE
 	      cout << "[node " << local_id <<"] txProcess (forwarding): buffer["<<i<<"] not empty @time " << sc_time_stamp().to_double()/1000 <<  endl;
-
+#endif 
 	      TPacket packet = buffer[i].Front();
 
 	      ////////////////////////////////////////////////////////////
@@ -269,7 +270,6 @@ void TRouter::txProcess()
 	      }
 	      else if (process_out[i]==ACTION_CANCEL_REQUEST)
 	      {
-		  cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_CANCEL_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  flush_buffer(i);
 	      }
 	      else if (process_out[i] == ACTION_END_CANCEL)
@@ -287,13 +287,12 @@ void TRouter::txProcess()
 		  // received packet on a given direction D in order to
 		  // inject a CONFIRM packet from the local direction towards D. The buffer[DIRECTION_LOCAL] is found not empty
 		  // but the associated process_out remains NOT_VALID
-		  cout << "[node " << local_id << "]: WARNING, process("<<i<<") =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: WARNING, process["<<i<<"] =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  assert(false);
 	      }
 	    else  if (process_out[i]==ACTION_RETRY_REQUEST)
 	    {
 	      flush_buffer(i);
-	      cout << "[node " << local_id << "]: process("<<i<<") =  ACTION_RETRY_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 	    }
 
 	      /// single destination, no action ////////////////////////////////
@@ -312,8 +311,9 @@ void TRouter::txProcess()
 			  req_tx[o].write(current_level_tx[o]);
 			  flush_buffer(i);
 
-			  // DEBUG
+#ifdef VERBOSE
 			  cout << "**DEBUG** " << "@node " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
+#endif
 
 			  // TODO: always release ?
 			  reservation_table.release(o);
@@ -333,7 +333,7 @@ void TRouter::txProcess()
 	      }
 	      else 
 	      {
-		  cout << "[node " << local_id << "]: CRITICAL, UNSUPPORTED process("<<i<<") =  " << process_out[i] << " [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		  cout << "[node " << local_id << "]: CRITICAL, UNSUPPORTED process["<<i<<"] =  " << process_out[i] << " [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  assert(false);
 	      }
 	  } // if buffer not empty
@@ -405,7 +405,9 @@ void TRouter::inject_to_network(const TPacket& p)
 
 void TRouter::flush_buffer(int d)
 {
+#ifdef VERBOSE
     cout << "[node " << local_id << "] flushing buffer direction " << d << endl;
+#endif
     this->buffer[d].Pop();
 }
 
