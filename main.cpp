@@ -57,6 +57,8 @@ int sc_main(int arg_num, char* arg_vet[])
 
   parseCmdLine(arg_num, arg_vet);
 
+  cout << "\n Using seed " << GlobalParams::rnd_generator_seed << endl;
+  srand(GlobalParams::rnd_generator_seed); // time(NULL));
   // Signals
   // TODO: check for nanorealistic frequencies
   sc_clock        clock("clock", 1, SC_NS);
@@ -70,7 +72,6 @@ int sc_main(int arg_num, char* arg_vet[])
   // Reset the chip and run the simulation
   reset.write(1);
   cout << "Reset...";
-  srand(GlobalParams::rnd_generator_seed); // time(NULL));
   sc_start(DEFAULT_RESET_TIME, SC_NS);
   reset.write(0);
   cout << " done! Now running for " << GlobalParams::simulation_time << " cycles..." << endl;
