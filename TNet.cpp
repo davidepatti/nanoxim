@@ -107,7 +107,10 @@ void TNet::buildMesh()
     }
 
   // invalidate reservation table and disr entries for defective channels
-  
+
+    double test_ran = ((double) rand()) / RAND_MAX;
+    cout << " --> test_ran " << test_ran << endl;
+
   if (GlobalParams::defective)
   {
       bool do_defect;
@@ -116,8 +119,10 @@ void TNet::buildMesh()
 	{
 	    for (int j=0; j<GlobalParams::mesh_dim_x-1; j++)
 	    {
-		cout << "Analyzing horizonal links, node " << (t[j][i]->r->local_id) << endl;
-		do_defect = (((double) rand()) / RAND_MAX < GlobalParams::defective);
+		cout << "Analyzing horizonal links, node " << (t[j][i]->r->local_id);
+		double ran = ((double) rand()) / RAND_MAX;
+		cout << " --> ran " << ran << endl;
+		do_defect = ( ran < GlobalParams::defective);
 
 		if (do_defect)
 		{

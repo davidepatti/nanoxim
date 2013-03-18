@@ -19,7 +19,6 @@ TSegmentId::TSegmentId()
 void DiSR::set_router(TRouter * r)
 {
     this->router = r;
-    cout << "[node " << router->local_id << "] DiSR::set_router() setting router id to " << r->local_id << endl;
     // To test the model, the node 0 is always used for bootstrapping 
     // the whole algorithm
     // Whener the router pointer is updated, status must be resetted
@@ -264,8 +263,9 @@ int DiSR::process(TPacket& p)
 		}
 		else if (freedirection == CYCLE_TIMEOUT)
 		{
-		    link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		    cout << "[node "<< router->local_id <<  "] DiSR::process(), CYCLE_TIMEOUT, cancelling SEGMENT_REQUEST id " << packet_segment_id << endl;
+		    free_direction(p.dir_in);
+		    generate_segment_cancel(p);
 		    return ACTION_CANCEL_REQUEST;
 		}
 		else if (freedirection == NO_LINK)
@@ -281,7 +281,7 @@ int DiSR::process(TPacket& p)
 	    /*
 	    // A SEGMENT_REQUEST packet reached a node candidate for starting segment:
 	    // - In every case, this means the starting segment has already been estabilished and the node must cancel a previous LED settings
-	    // - Further, in a free link is available, should forward
+	    // - Further, if a free link is available, should forward
 	    // the request  packet, otherwise send a cancel request
 	    //
 	    // TODO: UPDATE CRITICAL
@@ -325,14 +325,23 @@ int DiSR::process(TPacket& p)
 		    this->set_request_path(p.dir_in); // future confirm packet will be forwarded along this direction 
 		    return freedirection;
 		}
-		else
+		else if (freedirection==CYCLE_TIMEOUT)
 		{
-		    // TODO: this should not happen...
-		    cout << "CRITICAL [node "<< router->local_id <<  "] DiSR::process() no free link after cancelling a CANDIDATE_STARTING " << packet_segment_id << endl;
-		    assert(false);
-		    print_status();
-		    return ACTION_SKIP;
+		    cout << "[node "<< router->local_id <<  "] DiSR::process(), CYCLE_TIMEOUT, cancelling SEGMENT_REQUEST id " << packet_segment_id << endl;
+		    // This can happen when defective links are present
+		    free_direction(p.dir_in);
+		    generate_segment_cancel(p);
+		    return ACTION_CANCEL_REQUEST;
 		}
+		else if (freedirection==NO_LINK)
+		{
+		    cout << "WARNING [node "<< router->local_id <<  "] DiSR::process() no free link after cancelling a CANDIDATE_STARTING " << packet_segment_id << endl;
+		    free_direction(p.dir_in);
+		    generate_segment_cancel(p);
+		    return ACTION_CANCEL_REQUEST;
+		}
+		else
+		    assert(false);
 	    }
 	    // a segment request reached a node currently performing a find segment process
 	    // This means that the node is already assigned and visited and thus can confirm the request
@@ -655,6 +664,7 @@ int DiSR::process(TPacket& p)
 		    this->visited = false;
 		    this->setStatus(FREE);
 		    cout << "[node "<< router->local_id <<  "] DiSR::process(), forwarding SEGMENT_CANCEL " << packet_segment_id << " back to " << this->request_path << endl;
+		    // is it not necessary to use generate_segment_cancel(), since we already have a cancel packet
 		    return this->request_path;
 		}
 
@@ -696,7 +706,9 @@ void DiSR::reset_cyclelinks()
     this->cyclelinks_timeout = GlobalParams::cyclelinks;
     this->cycle_start = 0;
     this->current_link = 0;
+#ifdef VERBOSE
     cout << "[node "<<router->local_id<<"] DiSR::reset_cyclelinks() setting cycle_start =  " << current_link << endl;
+#endif
 }
 
 
