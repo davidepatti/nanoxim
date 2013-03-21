@@ -69,7 +69,7 @@ class GlobalStats {
     double getPower();
 
     // Shows global statistics
-    void showStats(std::ostream & out = std::cout);
+    void writeStats();
 
     void drawGraphviz();
 

@@ -43,6 +43,7 @@ int   GlobalParams::rnd_generator_seed               = time(NULL);
 int   GlobalParams::disr               = DEFAULT_DISR_SETUP;
 int   GlobalParams::bootstrap               = DEFAULT_DISR_BOOTSTRAP_NODE;
 int   GlobalParams::bootstrap_timeout               = DEFAULT_BOOTSTRAP_TIMEOUT;
+int   GlobalParams::bootstrap_immunity               = DEFAULT_BOOTSTRAP_IMMUNITY;
 int   GlobalParams::cyclelinks               = DEFAULT_CYCLE_LINKS;
 double   GlobalParams::defective		     = 0;
 
@@ -84,7 +85,7 @@ int sc_main(int arg_num, char* arg_vet[])
   // Show statistics
   GlobalStats gs(n);
   gs.drawGraphviz();
-  gs.showStats(std::cout);
+  gs.writeStats();
 
   return 0;
 

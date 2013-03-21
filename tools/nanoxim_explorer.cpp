@@ -25,6 +25,7 @@ using namespace std;
 #define DEF_TMP_DIR          "./"
 
 #define TMP_FILE_NAME        ".nanoxim_explorer.tmp"
+#define RES_FILE_NAME        "results.txt"
 
 #define DEFECTIVE_NODES_LABEL   "defective nodes:"
 #define NODE_COVERAGE_LABEL 	"node coverage:"
@@ -592,7 +593,7 @@ bool RunSimulation(const string& cmd_base,
 
   cout << cmd << endl;
   system(cmd.c_str());
-  if (!ReadResults(tmp_fname, sres, error_msg))
+  if (!ReadResults(RES_FILE_NAME, sres, error_msg))
     return false;
 
   string rm_cmd = string("rm -f ") + tmp_fname;
@@ -707,14 +708,15 @@ bool GenDiSRMatlabCode( ofstream& fout, string& error_msg)
        << "end" << endl
        << endl;
 
-  //fout << "figure(2);" << endl
-       fout << "hold on;" << endl
+  fout << "figure(2);" << endl
+       << "hold on;" << endl
        << "plot(data_link_coverage(:,1), data_link_coverage(:,2), '-or');" << endl
        << "ylim([0 1])" << endl
        << "xlabel('bootstrap node')" << endl
        << "ylabel('data_link_coverage')" << endl
        << endl;
 
+  /*
   /////////////////////////////////////////////////////////////////////////
   fout << "data_nsegments = [];" << endl
        << "for i = 1:rows," << endl
@@ -745,6 +747,7 @@ bool GenDiSRMatlabCode( ofstream& fout, string& error_msg)
        << "xlabel('bootstrap node')" << endl
        << "ylabel('data_avg_seg_length')" << endl
        << endl;
+       */
   /////////////////////////////////////////////////////////////////////////
   return true;
 }
