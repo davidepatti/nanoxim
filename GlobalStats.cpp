@@ -54,7 +54,7 @@ void GlobalStats::compute_disr_node_coverage()
 		TSegmentId seg_id = net->t[x][y]->r->disr.getLocalSegmentID();
 		int node_id = net->t[x][y]->r->local_id;
 		this->DiSR_stats.segmentList[seg_id].push_back(node_id);
-		cout << "Adding node " << node_id << " to segment " << seg_id << endl;
+		//cout << "Adding node " << node_id << " to segment " << seg_id << endl;
 	    }
     }
 
@@ -317,11 +317,8 @@ double GlobalStats::getPower()
 void GlobalStats::drawGraphviz()
 {
     FILE * fp;
-
-    char fn[50];
-    sprintf(fn,"graph_%dx%d_b%d",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap);
-    if (GlobalParams::cyclelinks)
-	strcat(fn,"_cyclelinks");
+    char fn[100];
+    sprintf(fn,"_%dx%d_bs%d_imm%d_cl%d_def%g_seed%d.txt",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap,GlobalParams::bootstrap_immunity,GlobalParams::cyclelinks,GlobalParams::defective,GlobalParams::rnd_generator_seed);
 
     if ( (fp = fopen(strcat(fn,".gv"),"w"))!= NULL)
     {
@@ -362,8 +359,11 @@ void GlobalStats::drawGraphviz()
 		    TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_EAST);
 		    if (tid.isAssigned())
 			fprintf(fp,"\nN%d->N%d [dir=none, color=red, style=bold, label=\"%d.%d\"]",curr_id,curr_id+1,tid.getNode(),tid.getLink());
-		    else
+		    else if (tid.isFree())
 			fprintf(fp,"\nN%d->N%d [dir=none, style=dotted, label=\".\"]",curr_id,curr_id+1);
+		    else if (!tid.isValid())
+			fprintf(fp,"\nN%d->N%d [dir=none, style=invis, label=\" \"]",curr_id,curr_id+1);
+		    else assert(false);
 
 		}
 	    }
@@ -382,8 +382,11 @@ void GlobalStats::drawGraphviz()
 		    TSegmentId tid = net->t[x][y]->r->disr.getLinkSegmentID(DIRECTION_SOUTH);
 		    if (tid.isAssigned())
 			fprintf(fp,"\nN%d->N%d [dir=none, color=red, style=bold, label=\"%d.%d\"]",curr_id,south_id,tid.getNode(),tid.getLink());
-		    else
+		    else if (tid.isFree())
 			fprintf(fp,"\nN%d->N%d [dir=none, style=dotted, label=\".\"]",curr_id,south_id);
+		    else if (!tid.isValid())
+			fprintf(fp,"\nN%d->N%d [dir=none, style=invis, label=\" \"]",curr_id,south_id);
+		    else assert(false);
 
 
 		}
@@ -402,22 +405,26 @@ void GlobalStats::drawGraphviz()
     }
 }
 
-void GlobalStats::showStats(std::ostream & out )
+void GlobalStats::writeStats()
 {
+    char fn[100];
+    sprintf(fn,"_%dx%d_bs%d_imm%d_cl%d_def%g_seed%d.txt",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap,GlobalParams::bootstrap_immunity,GlobalParams::cyclelinks,GlobalParams::defective,GlobalParams::rnd_generator_seed);
 
+    ofstream of;
+    of.open (fn);
     generate_disr_stats();
-    out << " DiSR analytical results " << endl;
-    out << "--------------------------------------------------- " << endl;
-    out << "total nodes: " << DiSR_stats.total_nodes << endl;
-    out << "total links: " << DiSR_stats.total_links << endl; 
-    out << "defective nodes: " << DiSR_stats.defective_nodes << endl;
-    out << "nodes covered: " << DiSR_stats.covered_nodes << endl;
-    out << "links covered: " << DiSR_stats.covered_links << endl;
-    out << "node coverage: " << DiSR_stats.node_coverage << endl;
-    out << "link coverage: " << DiSR_stats.link_coverage << endl;
-    out << "working coverage: " << DiSR_stats.working_link_coverage << endl;
-    out << "number of segments: " << DiSR_stats.nsegments << endl;
-    out << "average segment length: " << DiSR_stats.average_seg_length<< endl;
+    of << " DiSR analytical results " << endl;
+    of << "--------------------------------------------------- " << endl;
+    of << "total nodes: " << DiSR_stats.total_nodes << endl;
+    of << "total links: " << DiSR_stats.total_links << endl; 
+    of << "defective nodes: " << DiSR_stats.defective_nodes << endl;
+    of << "nodes covered: " << DiSR_stats.covered_nodes << endl;
+    of << "links covered: " << DiSR_stats.covered_links << endl;
+    of << "node coverage: " << DiSR_stats.node_coverage << endl;
+    of << "link coverage: " << DiSR_stats.link_coverage << endl;
+    of << "working coverage: " << DiSR_stats.working_link_coverage << endl;
+    of << "number of segments: " << DiSR_stats.nsegments << endl;
+    of << "average segment length: " << DiSR_stats.average_seg_length<< endl;
 
     map<TSegmentId, vector<int> >::const_iterator it;
 
@@ -429,4 +436,10 @@ void GlobalStats::showStats(std::ostream & out )
 	    cout << DiSR_stats.segmentList[tmpid][i] << " , ";
 
     }
+
+    of.close();
+    char cmd[200];
+    sprintf(cmd,"ln -sf ../%s tools/results.txt",fn);
+    system(cmd);
+
 }
