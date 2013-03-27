@@ -138,10 +138,10 @@ void TNet::buildMesh()
 		}
 	    }
 	}
-      for (int i=0; i<GlobalParams::mesh_dim_x; i++)
-      {
-	for (int j=0; j<GlobalParams::mesh_dim_y-1; j++)
+	for (int i=0; i<GlobalParams::mesh_dim_y-1; i++)
 	{
+	    for (int j=0; j<GlobalParams::mesh_dim_x; j++)
+	    {
 		int node_id = t[j][i]->r->local_id;
 		cout << "\nAnalyzing vertical links, node " << node_id;
 		do_defect = (((double) rand()) / RAND_MAX < GlobalParams::defective);
@@ -150,11 +150,11 @@ void TNet::buildMesh()
 		if (do_defect && (no_bootstrap_link || !GlobalParams::bootstrap_immunity) )
 		{
 		    cout << "found link defect " << endl;
-		    t[i][j]->r->disr.invalidate_direction(DIRECTION_SOUTH);
-		    t[i][j+1]->r->disr.invalidate_direction(DIRECTION_NORTH);
+		    t[j][i]->r->disr.invalidate_direction(DIRECTION_SOUTH);
+		    t[j][i+1]->r->disr.invalidate_direction(DIRECTION_NORTH);
 		    
-		    t[i][j]->r->reservation_table.invalidate(DIRECTION_SOUTH);
-		    t[i][j+1]->r->reservation_table.invalidate(DIRECTION_NORTH);
+		    t[j][i]->r->reservation_table.invalidate(DIRECTION_SOUTH);
+		    t[j][i+1]->r->reservation_table.invalidate(DIRECTION_NORTH);
 		}
 	}
       }
