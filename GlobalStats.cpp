@@ -318,7 +318,7 @@ void GlobalStats::drawGraphviz()
 {
     FILE * fp;
     char fn[100];
-    sprintf(fn,"_%dx%d_bs%d_imm%d_cl%d_def%g_seed%d.txt",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap,GlobalParams::bootstrap_immunity,GlobalParams::cyclelinks,GlobalParams::defective,GlobalParams::rnd_generator_seed);
+    sprintf(fn,"_%dx%d_bs%d_bsi%d_bst%d_cl%d_def%g_seed%d.txt",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap,GlobalParams::bootstrap_immunity,GlobalParams::bootstrap_timeout,GlobalParams::cyclelinks,GlobalParams::defective,GlobalParams::rnd_generator_seed);
 
     if ( (fp = fopen(strcat(fn,".gv"),"w"))!= NULL)
     {
@@ -408,7 +408,7 @@ void GlobalStats::drawGraphviz()
 void GlobalStats::writeStats()
 {
     char fn[100];
-    sprintf(fn,"_%dx%d_bs%d_imm%d_cl%d_def%g_seed%d.txt",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap,GlobalParams::bootstrap_immunity,GlobalParams::cyclelinks,GlobalParams::defective,GlobalParams::rnd_generator_seed);
+    sprintf(fn,"_%dx%d_bs%d_bsi%d_bst%d_cl%d_def%g_seed%d.txt",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap,GlobalParams::bootstrap_immunity,GlobalParams::bootstrap_timeout,GlobalParams::cyclelinks,GlobalParams::defective,GlobalParams::rnd_generator_seed);
 
     ofstream of;
     of.open (fn);
@@ -437,9 +437,10 @@ void GlobalStats::writeStats()
 
     }
 
-    of.close();
     char cmd[200];
-    sprintf(cmd,"ln -sf ../%s tools/results.txt",fn);
+    sprintf(cmd,"ln -sf %s results.txt",fn);
+    of << cmd << endl;
+    of.close();
     system(cmd);
 
 }

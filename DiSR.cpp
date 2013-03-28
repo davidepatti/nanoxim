@@ -150,7 +150,7 @@ int DiSR::process(TPacket& p)
     ////////////////////////////////////////////////////////
     {
 
-	cout << "[node "<<router->local_id << "] DiSR::process() found STARTING_SEGMENT_REQUEST with ID " << packet_segment_id << endl;
+	cout << "[node "<<router->local_id << "] DiSR::process() found STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
 
 	 // locally generated // //////////////////////////////////////////////////
 	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
@@ -158,31 +158,44 @@ int DiSR::process(TPacket& p)
 	     // just inject to the link found by next_free_link() during bootstrap
 	    return p.dir_out;
 	}
-	// A starting segment request packet returned to its orginal source, must confirm segment (if not done yet...)
-	// Note: this is a starting segment, the node is already
-	// visited, there's no need to move from tvisited to visited
+	// A starting segment request packet returned to its orginal source:
+	// - must check that is not a timeout deprecated request
+	// - must confirm segment (if not done yet...)
+	// Note: this is a starting segment, the node is already visited, there's no need to move from tvisited to visited
 	else if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
 	    // if not confirmed yet...
 	    if (!(this->segID.isAssigned()))
 	    {
-		this->segID = packet_segment_id;
-		link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
-		link_visited[p.dir_in] = packet_segment_id;
+		// search for a tvisited links with same id
+		// if not present, the id has been deprecated from timeout
+		for (int d=0;d<DIRECTIONS;d++)
+		{
+		    if (link_tvisited[d]==packet_segment_id)
+		    {
+			this->segID = packet_segment_id;
+			// TODO: missing the same for 'd' direction ??
+			link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
+			link_visited[p.dir_in] = packet_segment_id;
 
-		// since link LED has been updated:
-		reset_cyclelinks();
+			// since link LED has been updated:
+			reset_cyclelinks();
 
-		cout << "[node "<<router->local_id<<"] DiSR::process() confirming STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
-		setStatus(ASSIGNED);
+			cout << "[node "<<router->local_id<<"] DiSR::process() confirming STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
+			setStatus(ASSIGNED);
 
-		generate_segment_confirm(p);
-		return ACTION_CONFIRM; 
+			generate_segment_confirm(p);
+			return ACTION_CONFIRM; 
+		    }
+		}
+		// if we are here, no tvisited link was associated to the request
+
+		cout << "[node "<< router->local_id <<  "] DiSR::process() discarding deprecated STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
+		return ACTION_DISCARD;
 	    }
 	    else // starting segment with segID already confirmed...
 	    {
-		// TODO: determine more accurately what happened....
-		cout << "[node "<< router->local_id <<  "] DiSR::process() discarding STARTING_SEGMENT_REQUEST " << packet_segment_id << ", already done!" << endl;
+		cout << "[node "<< router->local_id <<  "] DiSR::process() discarding already confirmed STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
 		return ACTION_DISCARD;
 	    }
 	    
@@ -190,6 +203,8 @@ int DiSR::process(TPacket& p)
 	// foreign starting segment request ////////////////////////////////////
 	else if (  p.src_id!=router->local_id ) 
 	{
+	    // free nodes should contribute to flooding, wihtout looking at the segment id. 
+	    // This becasue there's no way of figuring out if the id is a deprecated flooding...
 	    if (this->getStatus()==FREE)
 	    {
 		cout << "[node "<<router->local_id << "] DiSR::process() enable ACTION_FLOOD" << endl;
@@ -204,18 +219,58 @@ int DiSR::process(TPacket& p)
 		// TODO: after flooding links has been selecte by the
 		// router, the LED variable should be update accordingly
 		return ACTION_FLOOD;
+	    } 
+	    // a node that has already done flooding must check if the id of the request is newer
+	    // In that case, must re-do the flooding with the new id
+	    else if (this->getStatus()==CANDIDATE_STARTING )
+	    {
+		if ( this->segID.getLink()<packet_segment_id.getLink())
+		{
+		    cout << "[node "<<router->local_id << "] DiSR::process() STARTING_SEGMENT_REQUEST " << packet_segment_id << " overwrites deprecated  " << this->segID << ", enable ACTION_FLOOD" << endl;
+		    // reset the previous LED data
+		    for (int i=0;i<DIRECTIONS;i++)
+		    {
+			// not valid direction (e.g. borderline) shouldn't be updated
+			if (link_visited[i].isValid() && link_tvisited[i].isValid())
+			{
+			    link_visited[i].set(NOT_RESERVED,NOT_RESERVED);
+			    link_tvisited[i].set(NOT_RESERVED,NOT_RESERVED);
+			}
+
+		    }
+		    // since link status has been updated, the pointer of the current link to be investigated must be resetted
+		    reset_cyclelinks();
+
+		    this->segID = packet_segment_id;
+		    tvisited = true;
+		    link_tvisited[p.dir_in] = packet_segment_id;
+
+		    this->set_request_path(p.dir_in);
+
+		    setStatus(CANDIDATE_STARTING);
+		    // TODO: after flooding links has been selecte by the
+		    // router, the LED variable should be update accordingly
+		    return ACTION_FLOOD;
+		}
+		else
+		{
+		    cout << "[node "<< router->local_id <<  "] DiSR::process() already candidate " << this->segID << " discarding STARTING_SEGMENT_REQUEST  " << packet_segment_id << endl;
+		    print_status();
+		    return ACTION_DISCARD;
+		}
 	    }
 		// not free node should ignore flooding and discard packet, reasons:
 		// - already candidate starting, so flooding already done
 		// - already assigned, so starting segment request deprecated
 	    else
 	    {
-		cout << "[node "<< router->local_id <<  "] DiSR::process() discarding flooding " << endl;
 		print_status();
+		cout << "[node "<< router->local_id <<  "] DiSR::process() discarding flooding " << endl;
 		return ACTION_DISCARD;
 	    }
 	    
 	}
+
 	assert(false);
     }
     /////////////////////////////////////////////////////////
@@ -870,62 +925,25 @@ void DiSR::update_status()
     // if this is the initial node the bootstrapped the starting segmnet request
     if (this->status==CANDIDATE_STARTING && this->visited)
     {
-	bootstrap_timeout--;
-	if (bootstrap_timeout>0)
+	// timeout is not unlimited
+	if (bootstrap_timeout!=-1)
 	{
-	    if (bootstrap_timeout%10==0)
-		cout << "[node "<<router->local_id<<"] DiSR::update_status(), bootstrap node emaining timeout: " << bootstrap_timeout << endl;
-	}
-	else // this condition should be really critical, assuming a proper timeout has been used
-	{
-	    cout << "CRITICAL [node "<<router->local_id<<"] DiSR::update_status(), bootstrap timeout RESET!" << endl;
-	    assert(false);
-	    /*
-	    candidate_timeout = GlobalParams::candidate_timeout;
-	    this->setStatus(FREE);
-	    */
-	}
-    }
-
-    // DEPRECATED, any candidate node should return free only using SEGMENT_CANCEL mechanism, in order to avoid inconsistencies 
-    // short timeouts, etc...
-    // The max hop limit should be used instead in order to limit
-    /*
-    if (this->status==CANDIDATE)
-    {
-	candidate_timeout--;
-	if (candidate_timeout>0)
-	{
-
-	    if (candidate_timeout%10==0)
-		cout << "[node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE remaining timeout: " << candidate_timeout << endl;
-	}
-	else
-	{
-	    visited= false;
-	    tvisited= false;
-	    segID.set(NOT_RESERVED,NOT_RESERVED);
-	    starting = false;
-	    terminal = false;
-	    subnet = NOT_RESERVED;
-	    current_link = DIRECTION_NORTH;
-
-	    for (int i =0;i<DIRECTIONS;i++)
+	    bootstrap_timeout--;
+	    if (bootstrap_timeout>0)
 	    {
-		// note: not valid links shouldnt' be set as free
-		if (link_visited[i].isValid())
-		{
-		    link_visited[i].set(NOT_RESERVED,NOT_RESERVED);
-		    link_tvisited[i].set(NOT_RESERVED,NOT_RESERVED);
-		}
+		if (bootstrap_timeout%1==0)
+		    cout << "[node "<<router->local_id<<"] DiSR::update_status(), bootstrap node emaining timeout: " << bootstrap_timeout << endl;
 	    }
-	    cout << "WARNING [node "<<router->local_id<<"] DiSR::update_status(), CANDIDATE timeout RESET!" << endl;
-	    candidate_timeout = GlobalParams::candidate_timeout;
-	    this->setStatus(FREE);
-	    // TODO: also reset links!
+	    else // this condition should be really critical, assuming a proper timeout has been used
+	    {
+		cout << "CRITICAL [node "<<router->local_id<<"] DiSR::update_status(), bootstrap timeout RESET!" << endl;
+		//assert(false);
+		bootstrap_timeout = GlobalParams::bootstrap_timeout;
+		this->setStatus(BOOTSTRAP);
+	    }
 	}
     }
-    */
+
 }
 
 // a visited node connected to not visited/tvisited links can start
@@ -980,14 +998,14 @@ void DiSR::bootstrap_node()
 
 	int candidate_link = next_free_link();
 
-	if (candidate_link!=NOT_VALID)
+	if (candidate_link>=0 && candidate_link < DIRECTIONS)
 	{
 	    TSegmentId segment_id;
 	    segment_id.set(router->local_id,candidate_link);
 	    // mark the link with id of segment request
 	    link_tvisited[candidate_link] = segment_id;
 	    visited = true;
-	    this->setStatus(ACTIVE_SEARCHING);
+	    this->setStatus(CANDIDATE_STARTING);
 
 
 	    // prepare the packet
