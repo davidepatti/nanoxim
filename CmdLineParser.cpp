@@ -17,7 +17,7 @@ void showHelp(char selfname[])
   cout << "\t-sim N\t\tRun for the specified simulation time [cycles] (default " << DEFAULT_SIMULATION_TIME << ")" << endl << endl;
   cout << "\t-disr - Run setup for distribuited Segment-base Routing" << endl;
   cout << "\t-bootstrap N - use node N as bootstrap node for Segment-base Routing" << endl;
-  cout << "\t-bootstrap_timeout N - used in DiSR Segment-base Routing" << endl;
+  cout << "\t-bootstrap_timeout N - used in DiSR Segment-base Routing (default none)" << endl;
   cout << "\t-bootstrap_immunity - avoid boostrap node links failure " << endl;
   cout << "\t-cyclelinks N - cycle N times when searching free links in DiSR (0=unlimited, default=1)" << endl;
   cout << "\t-defective X - percentage of defective links (0..1) " << endl;
@@ -54,16 +54,6 @@ void checkInputParameters()
   {
     cerr << "Error: buffer must be >= 1" << endl;
     exit(1);
-  }
-
-  // default timeout to bootstrap can be insufficient in mashes with longer paths
-  if (GlobalParams::bootstrap_timeout==DEFAULT_BOOTSTRAP_TIMEOUT)
-  {
-      int mesh_size = GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y;
-
-      GlobalParams::bootstrap_timeout = mesh_size*3;
-      
-      cout << "WARNING: automatically increasing candidate timeout to " << GlobalParams::bootstrap_timeout << " , use -bootstrap_timeout to customize..." << endl;
   }
 
 }
