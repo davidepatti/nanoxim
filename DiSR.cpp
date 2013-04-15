@@ -40,10 +40,6 @@ DiSR_status DiSR::getStatus() const
 	    assert(tvisited==false);
 	    assert(visited==false);
 	    break;
-	case READY_SEARCHING:
-	    assert(visited==true);
-	    assert(tvisited==false);
-	    break;
 	case ACTIVE_SEARCHING:
 	    assert(visited==true);
 	    assert(tvisited==false);
@@ -90,8 +86,6 @@ void DiSR::setStatus(const DiSR_status& new_status)
     switch (new_status) {
 	case BOOTSTRAP:
 	    //assert(new_status==ACTIVE_SEARCHING);
-	    break;
-	case READY_SEARCHING:
 	    break;
 	case ACTIVE_SEARCHING:
 	    break;
@@ -873,9 +867,6 @@ void DiSR::print_status() const
 	    case BOOTSTRAP:
 		cout << "[node "<<router->local_id<<"] DBS status:  BOOTSTRAP" << endl;
 		break;
-	    case READY_SEARCHING:
-		cout << "[node "<<router->local_id<<"] DBS status:  READY_SEARCHING" << endl;
-		break;
 	    case ACTIVE_SEARCHING:
 		cout << "[node "<<router->local_id<<"] DBS status:  ACTIVE_SEARCHING" << endl;
 		break;
@@ -927,7 +918,7 @@ void DiSR::update_status()
     {
 	// timeout is not unlimited
 	if (bootstrap_timeout!=-1)
-	{
+	{	
 	    bootstrap_timeout--;
 	    if (bootstrap_timeout>0)
 	    {
@@ -959,7 +950,6 @@ void DiSR::start_investigate_links()
 
 	if ( (candidate_link>=0) && (candidate_link<DIRECTION_LOCAL) )
 	{
-	    this->setStatus(READY_SEARCHING);
 	    TSegmentId segment_id;
 	    segment_id.set(router->local_id,candidate_link);
 	    // mark the link and the node with id of segment request

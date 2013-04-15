@@ -78,7 +78,6 @@ using namespace std;
 #define MAX_STATIC_DIM 20
 
 enum DiSR_status { BOOTSTRAP, 
-                   READY_SEARCHING, 
 		   ACTIVE_SEARCHING, 
 		   CANDIDATE, 
 		   CANDIDATE_STARTING, 
