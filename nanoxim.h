@@ -101,7 +101,8 @@ struct GlobalParams
   static int bootstrap_timeout;
   static int bootstrap_immunity;
   static int cyclelinks;
-  static double defective;
+  static double defective_links;
+  static double defective_nodes;
 };
 
 

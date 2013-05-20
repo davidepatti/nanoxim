@@ -42,6 +42,8 @@ SC_MODULE(TNode)
   TRouter*            r;               // Router instance
   TProcessingElement* pe;              // Processing Element instance
 
+  bool valid;
+
   // Constructor
 
   SC_CTOR(TNode)
