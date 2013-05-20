@@ -45,7 +45,8 @@ int   GlobalParams::bootstrap               	= DEFAULT_DISR_BOOTSTRAP_NODE;
 int   GlobalParams::bootstrap_timeout               = DEFAULT_BOOTSTRAP_TIMEOUT;
 int   GlobalParams::bootstrap_immunity               = DEFAULT_BOOTSTRAP_IMMUNITY;
 int   GlobalParams::cyclelinks               	     = DEFAULT_CYCLE_LINKS;
-double   GlobalParams::defective		     = 0;
+double   GlobalParams::defective_links		     = 0;
+double   GlobalParams::defective_nodes		     = 0;
 
 //---------------------------------------------------------------------------
 

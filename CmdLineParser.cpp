@@ -20,7 +20,8 @@ void showHelp(char selfname[])
   cout << "\t-bootstrap_timeout N - used in DiSR Segment-base Routing (default none)" << endl;
   cout << "\t-bootstrap_immunity - avoid boostrap node links failure " << endl;
   cout << "\t-cyclelinks N - cycle N times when searching free links in DiSR (0=unlimited, default=1)" << endl;
-  cout << "\t-defective X - percentage of defective links (0..1) " << endl;
+  cout << "\t-defective_links X - percentage of defective links (0..1) " << endl;
+  cout << "\t-defective_nodes X - percentage of defective links (0..1) " << endl;
   cout << "\n-seed N - for randomness (default = time(NULL) " << endl;
 }
 
@@ -98,8 +99,10 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	GlobalParams::bootstrap_immunity = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-cyclelinks"))
 	GlobalParams::cyclelinks = atoi(arg_vet[++i]); 
-      else if (!strcmp(arg_vet[i], "-defective"))
-	GlobalParams::defective = atof(arg_vet[++i]); 
+      else if (!strcmp(arg_vet[i], "-defective_links"))
+	GlobalParams::defective_links = atof(arg_vet[++i]); 
+      else if (!strcmp(arg_vet[i], "-defective_nodes"))
+	GlobalParams::defective_nodes = atof(arg_vet[++i]); 
       else if (!strcmp(arg_vet[i], "-seed"))
 	GlobalParams::rnd_generator_seed = atoi(arg_vet[++i]); 
       else 

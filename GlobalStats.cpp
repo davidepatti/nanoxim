@@ -63,9 +63,6 @@ void GlobalStats::compute_disr_node_coverage()
     this->DiSR_stats.node_coverage = (double)covered/this->DiSR_stats.total_nodes;
     this->DiSR_stats.nsegments = this->DiSR_stats.segmentList.size();
     this->DiSR_stats.average_seg_length = covered/(double)(this->DiSR_stats.nsegments);
-
-
-
 }
 
 /* get the percentage of links covered/assigned by the DiSR 
@@ -318,7 +315,16 @@ void GlobalStats::drawGraphviz()
 {
     FILE * fp;
     char fn[100];
-    sprintf(fn,"_%dx%d_bs%d_bsi%d_bst%d_cl%d_def%g_seed%d.txt",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap,GlobalParams::bootstrap_immunity,GlobalParams::bootstrap_timeout,GlobalParams::cyclelinks,GlobalParams::defective,GlobalParams::rnd_generator_seed);
+    sprintf(fn,"_%dx%d_bs%d_bsi%d_bst%d_cl%d_defl%g_defn%g_seed%d.txt",
+	    GlobalParams::mesh_dim_x,
+	    GlobalParams::mesh_dim_y,
+	    GlobalParams::bootstrap,
+	    GlobalParams::bootstrap_immunity,
+	    GlobalParams::bootstrap_timeout,
+	    GlobalParams::cyclelinks,
+	    GlobalParams::defective_links,
+	    GlobalParams::defective_nodes,
+	    GlobalParams::rnd_generator_seed);
 
     if ( (fp = fopen(strcat(fn,".gv"),"w"))!= NULL)
     {
@@ -342,7 +348,10 @@ void GlobalStats::drawGraphviz()
 
 		}
 		else
+		    if (net->t[x][y]->valid )
 		    fprintf(fp,"N%d [shape=square, fixedsize=true]; ",net->t[x][y]->r->local_id);
+		else // defective/not valid node
+		    fprintf(fp,"N%d [shape=square, style=dotted, fixedsize=true, label=X]; ",net->t[x][y]->r->local_id);
 	    }
 	    fprintf(fp," }");
 	}
@@ -360,7 +369,7 @@ void GlobalStats::drawGraphviz()
 		    if (tid.isAssigned())
 			fprintf(fp,"\nN%d->N%d [dir=none, color=red, style=bold, label=\"%d.%d\"]",curr_id,curr_id+1,tid.getNode(),tid.getLink());
 		    else if (tid.isFree())
-			fprintf(fp,"\nN%d->N%d [dir=none, style=dotted, label=\".\"]",curr_id,curr_id+1);
+			fprintf(fp,"\nN%d->N%d [dir=none, style=dotted, label=\"\"]",curr_id,curr_id+1);
 		    else if (!tid.isValid())
 			fprintf(fp,"\nN%d->N%d [dir=none, style=invis, label=\" \"]",curr_id,curr_id+1);
 		    else assert(false);
@@ -383,7 +392,7 @@ void GlobalStats::drawGraphviz()
 		    if (tid.isAssigned())
 			fprintf(fp,"\nN%d->N%d [dir=none, color=red, style=bold, label=\"%d.%d\"]",curr_id,south_id,tid.getNode(),tid.getLink());
 		    else if (tid.isFree())
-			fprintf(fp,"\nN%d->N%d [dir=none, style=dotted, label=\".\"]",curr_id,south_id);
+			fprintf(fp,"\nN%d->N%d [dir=none, style=dotted, label=\"\"]",curr_id,south_id);
 		    else if (!tid.isValid())
 			fprintf(fp,"\nN%d->N%d [dir=none, style=invis, label=\" \"]",curr_id,south_id);
 		    else assert(false);
@@ -408,7 +417,17 @@ void GlobalStats::drawGraphviz()
 void GlobalStats::writeStats()
 {
     char fn[100];
-    sprintf(fn,"_%dx%d_bs%d_bsi%d_bst%d_cl%d_def%g_seed%d.txt",GlobalParams::mesh_dim_x,GlobalParams::mesh_dim_y,GlobalParams::bootstrap,GlobalParams::bootstrap_immunity,GlobalParams::bootstrap_timeout,GlobalParams::cyclelinks,GlobalParams::defective,GlobalParams::rnd_generator_seed);
+
+    sprintf(fn,"_%dx%d_bs%d_bsi%d_bst%d_cl%d_defl%g_defn%g_seed%d.txt",
+	    GlobalParams::mesh_dim_x,
+	    GlobalParams::mesh_dim_y,
+	    GlobalParams::bootstrap,
+	    GlobalParams::bootstrap_immunity,
+	    GlobalParams::bootstrap_timeout,
+	    GlobalParams::cyclelinks,
+	    GlobalParams::defective_links,
+	    GlobalParams::defective_nodes,
+	    GlobalParams::rnd_generator_seed);
 
     ofstream of;
     of.open (fn);
