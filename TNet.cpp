@@ -119,92 +119,83 @@ void TNet::buildMesh()
     // invalidate reservation table and disr entries for defective nodes
     if (GlobalParams::defective_nodes)
     {
-	bool do_defect;
 
 	for (int i=0; i<GlobalParams::mesh_dim_y; i++)
 	{
 	    for (int j=0; j<GlobalParams::mesh_dim_x; j++)
 	    {
+		bool do_defect = false;
 		int node_id = t[j][i]->r->local_id;
 		int bootstrap_id =GlobalParams::bootstrap;
 
 		cout << "Analyzing node " << node_id;
 		double ran = ((double) rand()) / RAND_MAX;
-		cout << " --> ran " << ran << endl;
-		do_defect = ( ran < GlobalParams::defective_nodes);
+		//cout << " --> ran " << ran << endl;
 
-
-		// note that a defective bootstrap node makes no
-		// sense...
-		if (do_defect && node_id!=bootstrap_id)
+		// if defect happens...
+		if ( ran < GlobalParams::defective_nodes)
 		{
-		    cout << "found node defect " << endl;
+		    do_defect = true;
+		    // and if there's immunity...
+		    if (GlobalParams::bootstrap_immunity)
+		    {
+			// disable defect if any neighbor (or the node itself) is bootstrap
+			for (int d=0;d<DIRECTIONS;d++)
+			    if (t[j][i]->r->getNeighborId(node_id,d) == bootstrap_id)
+				do_defect = false;
+
+			if (node_id==bootstrap_id) do_defect = false;
+		    }
+		}
+
+		if (do_defect)
+		{
+		    cout << " found node defect " << endl;
 		    t[j][i]->valid = false;
 
-		    // For each direction, we check the corrensponding signal on other side
-		    // because no adjacent bootstrap node should be
-		    // touched if immunity is on
-
 		    // NORTH link
-
-		    // Checking neighbor towards north, and if not bootstrap (or no immunity)
+		    
 		    // Note that if i = 0, that is, a border top node,
-		    // all this stuff makes no sense because direction
-		    // doesn't exhists
+		    // all this stuff makes no sense because direction doesn't exhists
+		    //
 		    if (i>0) {
-
-			if ( (t[j][i-1]->r->local_id != bootstrap_id ) || !GlobalParams::bootstrap_immunity)
-			{
 			    t[j][i]->r->disr.invalidate_direction(DIRECTION_NORTH);
 			    t[j][i]->r->reservation_table.invalidate(DIRECTION_NORTH);
-
 			    t[j][i-1]->r->disr.invalidate_direction(DIRECTION_SOUTH);
 			    t[j][i-1]->r->reservation_table.invalidate(DIRECTION_SOUTH);
-
-			}
 		    }
-
 
 		    // EAST link
 
 		    // not too right
 		    if (j<GlobalParams::mesh_dim_x-1)
 		    {
-			if ( (t[j+1][i]->r->local_id != bootstrap_id ) || !GlobalParams::bootstrap_immunity)
-			{
 			    t[j+1][i]->r->disr.invalidate_direction(DIRECTION_WEST);
 			    t[j+1][i]->r->reservation_table.invalidate(DIRECTION_WEST);
 
 			    t[j][i]->r->disr.invalidate_direction(DIRECTION_EAST);
 			    t[j][i]->r->reservation_table.invalidate(DIRECTION_EAST);
 
-			}
 		    }
 
 		    // SOUTH LINK
 		    if (i<GlobalParams::mesh_dim_y-1)
 		    {
-			if ( (t[j][i+1]->r->local_id != bootstrap_id ) || !GlobalParams::bootstrap_immunity)
-			{
 			    t[j][i]->r->disr.invalidate_direction(DIRECTION_SOUTH);
 			    t[j][i]->r->reservation_table.invalidate(DIRECTION_SOUTH);
 
 			    t[j][i+1]->r->disr.invalidate_direction(DIRECTION_NORTH);
 			    t[j][i+1]->r->reservation_table.invalidate(DIRECTION_NORTH);
-			}
 		    }
 
 		    // WEST link
 		    if (j>0)
 		    {
-			if ( (t[j-1][i]->r->local_id != bootstrap_id ) || !GlobalParams::bootstrap_immunity)
-			{
 			    t[j][i]->r->disr.invalidate_direction(DIRECTION_WEST);
 			    t[j][i]->r->reservation_table.invalidate(DIRECTION_WEST);
 
 			    t[j-1][i]->r->disr.invalidate_direction(DIRECTION_EAST);
 			    t[j-1][i]->r->reservation_table.invalidate(DIRECTION_EAST);
-			}
 		    }
 
 
