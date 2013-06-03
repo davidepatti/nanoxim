@@ -253,7 +253,7 @@ bool ManageParameter(ifstream& fin,
 {
   bool err;
 
-  if (parameter == "bootstrap")
+  if (parameter == "bootstrap" || parameter == "defective_nodes" )
     err = ManageCompressedParameterSet(fin, parameter, params_space, error_msg);
   else
     err = ManagePlainParameterSet(fin, parameter, params_space, error_msg);
@@ -677,93 +677,19 @@ bool PrintMatlabVariableBegin(const TParametersSpace& aggragated_params_space,
 
   return true;
 }
-// -------------------------------------------------------------------------------
-// DiSR specific matlab code
-// - less general code, just a quick and readable disr specific matlab code
-bool GenDiSRMatlabCode( ofstream& fout, string& error_msg)
-{
-    // number of output variables generated
-    int out_col = 4;
-
-  fout << "data_node_coverage = [];" << endl
-       << "for i = 1:rows," << endl
-       << "   tmp = " << MATLAB_VAR_NAME << "(i, cols-" << out_col <<"+1);" << endl
-       << "   data_node_coverage  = [data_node_coverage; " << MATLAB_VAR_NAME << "(i, 1:cols-"<<out_col<<"), tmp];" << endl
-       << "end" << endl
-       << endl;
-
-  fout << "figure(1);" << endl
-       << "hold on;" << endl
-       << "plot(data_node_coverage(:,1), data_node_coverage(:,2), '-xb');" << endl
-       << "ylim([0 1])" << endl
-       << "xlabel('bootstrap node')" << endl
-       << "ylabel('data_node_coverage')" << endl
-       << endl;
-
-  /////////////////////////////////////////////////////////////////////////
-  fout << "data_link_coverage = [];" << endl
-       << "for i = 1:rows," << endl
-       << "   tmp = " << MATLAB_VAR_NAME << "(i, cols-" << out_col <<"+2);" << endl
-       << "   data_link_coverage  = [data_link_coverage; " << MATLAB_VAR_NAME << "(i, 1:cols-"<<out_col<<"), tmp];" << endl
-       << "end" << endl
-       << endl;
-
-  fout << "figure(2);" << endl
-       << "hold on;" << endl
-       << "plot(data_link_coverage(:,1), data_link_coverage(:,2), '-or');" << endl
-       << "ylim([0 1])" << endl
-       << "xlabel('bootstrap node')" << endl
-       << "ylabel('data_link_coverage')" << endl
-       << endl;
-
-  /*
-  /////////////////////////////////////////////////////////////////////////
-  fout << "data_nsegments = [];" << endl
-       << "for i = 1:rows," << endl
-       << "   tmp = " << MATLAB_VAR_NAME << "(i, cols-" << out_col <<"+3);" << endl
-       << "   data_nsegments  = [data_nsegments; " << MATLAB_VAR_NAME << "(i, 1:cols-"<<out_col<<"), tmp];" << endl
-       << "end" << endl
-       << endl;
-
-  fout << "figure(2);" << endl
-       << "hold on;" << endl
-       << "plot(data_nsegments(:,1), data_nsegments(:,2), '-xb');" << endl
-//       << "ylim([0 1])" << endl
-       << "xlabel('bootstrap node')" << endl
-       << "ylabel('data_nsegments')" << endl
-       << endl;
-  /////////////////////////////////////////////////////////////////////////
-  fout << "data_avg_seg_length = [];" << endl
-       << "for i = 1:rows," << endl
-       << "   tmp = " << MATLAB_VAR_NAME << "(i, cols-" << out_col <<"+4);" << endl
-       << "   data_avg_seg_length  = [data_avg_seg_length; " << MATLAB_VAR_NAME << "(i, 1:cols-"<<out_col<<"), tmp];" << endl
-       << "end" << endl
-       << endl;
-
-  fout << "figure(3);" << endl
-       << "hold on;" << endl
-       << "plot(data_avg_seg_length(:,1), data_avg_seg_length(:,2), '-xb');" << endl
-       //<< "ylim([0 1])" << endl
-       << "xlabel('bootstrap node')" << endl
-       << "ylabel('data_avg_seg_length')" << endl
-       << endl;
-       */
-  /////////////////////////////////////////////////////////////////////////
-  return true;
-}
 
 //---------------------------------------------------------------------------
 
-//---------------------------------------------------------------------------
-
-bool GenMatlabCode(const string& var_name,
+bool GenMatlabGraph( const string& xlabel,
+		    const string& ylabel,
+		   const string& title,
 		   const int fig_no,
 		   const int repetitions, const int column,
 		   ofstream& fout, string& error_msg)
 {
-    int out_col = 2;
-
-  fout << var_name << " = [];" << endl
+    // number of outputs
+  int out_col = 4;
+  fout << ylabel << " = [];" << endl
        << "for i = 1:rows/" << repetitions << "," << endl
        << "   ifirst = (i - 1) * " << repetitions << " + 1;" << endl
        << "   ilast  = ifirst + " << repetitions << " - 1;" << endl
@@ -771,20 +697,30 @@ bool GenMatlabCode(const string& var_name,
        << "   avg = mean(tmp);" << endl
        << "   [h sig ci] = ttest(tmp, 0.1);" << endl
        << "   ci = (ci(2)-ci(1))/2;" << endl
-       << "   " << var_name << " = [" << var_name << "; " << MATLAB_VAR_NAME << "(ifirst, 1:cols-"<<out_col<<"), avg ci];" << endl
+       << "   " << ylabel << " = [" << ylabel << "; " << MATLAB_VAR_NAME << "(ifirst, 1:cols-"<<out_col<<"), avg ci];" << endl
        << "end" << endl
        << endl;
 
-  fout << "figure(" << fig_no << ");" << endl
-       << "hold on;" << endl
-       << "plot(" << var_name << "(:,1), " << var_name << "(:,2), symbol);" << endl
-       << "ylim([0 1])" << endl
-       << "xlabel('bootstrap node')" << endl
-       << "ylabel('"<<var_name<<"')" << endl
-       << endl;
+      fout << "figure(" << fig_no << ");" << endl
+	   << "hold on;" << endl
+	   << "title('"<<title<<"')" << endl 
+	   << "plot(" << ylabel << "(:,1), " << ylabel << "(:,2), symbol);" << endl
+	   << "ylim([0 1])" << endl
+	   << "xlabel('"<<xlabel<<"')" << endl
+	   << "ylabel('"<<ylabel<<"')" << endl;
 
+  if (     (strcmp(xlabel.c_str(),"Node Defect Rate")==0) 
+        || (strcmp(xlabel.c_str(),"Link Defect Rate")==0) )
+  {
 
-  return true;
+	   fout << "x = [0:0.05:0.5]" << endl
+	   << "y = 1-x" << endl
+	   << "plot(x,y,'--r')" << endl
+	   << "legend('DiSR','Ideal')" << endl
+	   << endl;
+  }
+
+	      
 }
 
 //---------------------------------------------------------------------------
@@ -817,30 +753,21 @@ bool GenMatlabCodeSaturationAnalysis(const string& var_name,
 bool PrintMatlabVariableEnd(const int repetitions,
 			    ofstream& fout, string& error_msg)
 {
-  fout << "];" << endl << endl;
 
-  fout << "rows = size(" << MATLAB_VAR_NAME << ", 1);" << endl
-       << "cols = size(" << MATLAB_VAR_NAME << ", 2);" << endl
-       << endl;
 
-  if (!GenDiSRMatlabCode(fout, error_msg))
-    return false;
-  /*
-  if (!GenMatlabCode(string(MATLAB_VAR_NAME) + "_node_coverage", 2,
-		     repetitions, 1, fout, error_msg))
+  if (!GenMatlabGraph("Node Defect Rate", "node_coverage","TEST TITLE 1",1, repetitions, 1, fout, error_msg))
     return false;
 
-  if (!GenMatlabCode(string(MATLAB_VAR_NAME) + "_link_converage", 3,
-		     repetitions, 2, fout, error_msg))
+  if (!GenMatlabGraph("Link Defect Rate", "link_coverage","TEST TITLE 2",2, repetitions, 2, fout, error_msg))
     return false;
 
-    */
   return true;
 }
 
 //---------------------------------------------------------------------------
 
-bool RunSimulations(const TConfigurationSpace& conf_space,
+bool RunSimulations(const string& script_fname,
+	            const TConfigurationSpace& conf_space,
 		    const TParameterSpace&     default_params,
 		    const TParametersSpace&    aggragated_params_space,
 		    const TParameterSpace&     explorer_params,
@@ -865,7 +792,8 @@ bool RunSimulations(const TConfigurationSpace& conf_space,
     {
       string conf_cmd_line = Configuration2CmdLine(conf_space[i]);
 
-      string   mfname = Configuration2FunctionName(conf_space[i]);
+      //string   mfname = Configuration2FunctionName(conf_space[i]);
+      string   mfname = script_fname;
       string   fname  = string("out_matlab/")+mfname + ".m";
       ofstream fout;
       if (!PrintHeader(fname, eparams, def_cmd_line, conf_cmd_line, fout, error_msg))
@@ -891,6 +819,12 @@ bool RunSimulations(const TConfigurationSpace& conf_space,
 			      aggr_conf_space[j], fout, error_msg))
 	    return false;
 	}
+
+      fout << "];" << endl << endl;
+
+      fout << "rows = size(" << MATLAB_VAR_NAME << ", 1);" << endl
+	   << "cols = size(" << MATLAB_VAR_NAME << ", 2);" << endl
+	   << endl;
 
       if (!PrintMatlabVariableEnd(eparams.repetitions, fout, error_msg))
 	return false;
@@ -930,7 +864,7 @@ bool RunSimulations(const string& script_fname,
 
   TConfigurationSpace conf_space = Explore(ps);
 
-  if (!RunSimulations(conf_space, default_params, 
+  if (!RunSimulations(script_fname, conf_space, default_params, 
 		      aggragated_params_space, explorer_params, error_msg))
     return false;
 
