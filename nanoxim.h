@@ -70,7 +70,7 @@ using namespace std;
 #define DEFAULT_DISR_SETUP			     0
 #define DEFAULT_DISR_BOOTSTRAP_NODE		     0
 #define DEFAULT_BOOTSTRAP_TIMEOUT	          -1
-#define DEFAULT_BOOTSTRAP_IMMUNITY	          1 
+#define DEFAULT_BOOTSTRAP_IMMUNITY	          0
 #define DEFAULT_CYCLE_LINKS			1
 #define DEFAULT_DEFECTIVE_LINKS			0
 
