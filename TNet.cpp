@@ -110,7 +110,10 @@ void TNet::buildMesh()
 
 
     /* the first random number is flawed.... */
-    double test_ran = ((double) rand()) / RAND_MAX;
+    double rnd = (double)rand();
+    double test_ran = (rnd) / RAND_MAX;
+    cout << " --> RAND_MAX " << RAND_MAX << endl;
+    cout << " --> rnd " << rnd << endl;
     cout << " --> test_ran " << test_ran << endl;
 
     // TODO: move as cmdline option chech
