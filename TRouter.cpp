@@ -95,12 +95,14 @@ void TRouter::txProcess()
 	    if ( !buffer[i].IsEmpty() )
 	    {
 
-		//cout << "[node " << local_id <<"] txProcess: buffer["<<i<<"] not empty @time " << sc_time_stamp().to_double()/1000 <<  endl;
 		TPacket packet = buffer[i].Front();
 		packet.dir_in = i;
 
 		process_out[i] = process(packet);
-		//cout << "DEBUG*** [node " << local_id <<"] process_out["<<i<<"]  = " << process_out[i] << " @time " << sc_time_stamp().to_double()/1000 <<  endl;
+#ifdef VERBOSE
+		cout << "[node " << local_id <<"] txProcess (1st phase reservation) : buffer["<<i<<"] not empty @time " << sc_time_stamp().to_double()/1000 <<  endl;
+		cout << "[node " << local_id <<"] process_out["<<i<<"]  = " << process_out[i] << " @time " << sc_time_stamp().to_double()/1000 <<  endl;
+#endif
 
 		// broadcast required //////////////////////////
 		if (process_out[i] == ACTION_FLOOD)
