@@ -91,6 +91,9 @@ void TRouter::txProcess()
 	    int i = (start_from_port + j) % (DIRECTIONS + 1);
 
 	    process_out[i] = NOT_VALID;
+#ifdef VERBOSE
+	  cout << "[node " << local_id << "]: process["<<i<<"] initialized as NOT_VALID  @time " <<sc_time_stamp().to_double()/1000<<endl;
+#endif
 
 	    if ( !buffer[i].IsEmpty() )
 	    {
@@ -189,7 +192,7 @@ void TRouter::txProcess()
 
 #ifdef VERBOSE
 	      cout << "[node " << local_id <<"] DEBUG between 1st phase - forwarding: " << endl;
-	      for (int z=0;z<DIRECTIONS;z++) 
+	      for (int z=0;z<DIRECTIONS+1;z++) 
 		  cout << "\t DEBUG process_out["<<z<<"] is " << process_out[z] << endl;
 #endif 
       // 2nd phase: Forwarding
