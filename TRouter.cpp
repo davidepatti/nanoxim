@@ -187,6 +187,11 @@ void TRouter::txProcess()
 	}
       start_from_port++;
 
+#ifdef VERBOSE
+	      cout << "[node " << local_id <<"] DEBUG between 1st phase - forwarding: " << endl;
+	      for (int z=0;z<DIRECTIONS;z++) 
+		  cout << "\t DEBUG process_out["<<z<<"] is " << process_out[z] << endl;
+#endif 
       // 2nd phase: Forwarding
       for(int i=0; i<DIRECTIONS+1; i++)
       {
