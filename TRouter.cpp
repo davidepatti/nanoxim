@@ -80,7 +80,7 @@ void TRouter::txProcess()
 	// For each direction, the output of the process function
       // note: since the process function can also involve control packets (e.g. DiSR) its output can be either a direction to be reserved
       // or an action to be taken (e.g. flooding)
-	int process_out[DIRECTIONS];
+	int process_out[DIRECTIONS+1];
 
 
       // /////////////////////////////////////////////////////////////////////////
