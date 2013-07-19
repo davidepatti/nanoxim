@@ -158,6 +158,7 @@ void TRouter::txProcess()
 		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_CONFIRM [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  // a confirmation packet has been injected in the local buffer that will be processed on next cycle
 		  process_out[DIRECTION_LOCAL] = ACTION_SKIP;
+                 
 		}
 		else if (process_out[i]==NOT_VALID)
 		{

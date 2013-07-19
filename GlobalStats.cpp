@@ -31,6 +31,7 @@ void GlobalStats::generate_disr_stats()
 
     compute_disr_node_coverage();
     compute_disr_link_coverage();
+
     /*
     compute_disr_average_path_length();
     compute_disr_average_link_weight();
@@ -404,8 +405,9 @@ void GlobalStats::drawGraphviz()
 
 	fprintf(fp,"\n }");
 	fclose(fp);
-	char cmd[100];
+	char cmd[200];
 	sprintf(cmd,"dot -Tpng -o %s.png %s",fn,fn);
+	cout << cmd << endl;
         system(cmd);
     }
     else
