@@ -82,6 +82,10 @@ void TRouter::txProcess()
       // or an action to be taken (e.g. flooding)
 	int process_out[DIRECTIONS+1];
 
+	for (int d=0;d<DIRECTIONS+1;d++)
+	    process_out[d] = NOT_VALID;
+
+
 
       // /////////////////////////////////////////////////////////////////////////
       // 1st phase: Reservation
@@ -90,14 +94,9 @@ void TRouter::txProcess()
 	{
 	    int i = (start_from_port + j) % (DIRECTIONS + 1);
 
-	    process_out[i] = NOT_VALID;
-#ifdef VERBOSE
-	  cout << "[node " << local_id << "]: process["<<i<<"] initialized as NOT_VALID  @time " <<sc_time_stamp().to_double()/1000<<endl;
-#endif
 
 	    if ( !buffer[i].IsEmpty() )
 	    {
-
 		TPacket packet = buffer[i].Front();
 		packet.dir_in = i;
 

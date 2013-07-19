@@ -27,7 +27,6 @@
 #include "CmdLineParser.h"
 #include "GlobalStats.h"
 
-
 using namespace std;
 
 //---------------------------------------------------------------------------
