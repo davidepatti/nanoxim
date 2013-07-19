@@ -1,0 +1,23 @@
+[topology]
+   15x15
+[/topology]
+
+[defective_nodes]
+0 0.5 0.05
+[/defective_nodes]
+
+[routing]
+[/routing]
+
+[default]
+   -disr -cyclelinks 1 -bootstrap 127 -bootstrap_immunity -bootstrap_timeout 250
+[/default]
+
+[aggregation]
+defective_nodes
+[/aggregation]
+
+[explorer]
+   simulator ../nanoxim
+   repetitions 5
+[/explorer]
