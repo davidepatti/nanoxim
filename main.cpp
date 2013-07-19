@@ -51,7 +51,6 @@ double   GlobalParams::defective_nodes		     = 0;
 
 int sc_main(int arg_num, char* arg_vet[])
 {
-
   // Handle command-line arguments
   cout << endl << "\t\tNanoxim - nanonetwork simulator" << endl;
   cout << "\t\t(C) University of Catania" << endl << endl;
