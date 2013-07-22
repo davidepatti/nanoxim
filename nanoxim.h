@@ -75,7 +75,7 @@ using namespace std;
 #define DEFAULT_DEFECTIVE_LINKS			0
 
 // TODO by Fafa - this MUST be removed!!!
-#define MAX_STATIC_DIM 20
+#define MAX_STATIC_DIM 35
 
 enum DiSR_status { BOOTSTRAP, 
 		   ACTIVE_SEARCHING, 

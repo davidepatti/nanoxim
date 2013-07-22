@@ -403,6 +403,7 @@ int DiSR::process(TPacket& p)
 		link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		generate_segment_confirm(p);
 		this->set_request_path(p.dir_in); // future confirm packet will be forwarded along this direction 
+		cout << "[node "<<router->local_id<<"] DiSR::process() confirming SEGMENT_REQUEST " << packet_segment_id << endl;
 		return ACTION_CONFIRM;
 
 	    }
@@ -417,6 +418,7 @@ int DiSR::process(TPacket& p)
 		link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 		generate_segment_confirm(p);
 		this->set_request_path(p.dir_in); // future confirm packet will be forwarded along this direction 
+		cout << "[node "<<router->local_id<<"] DiSR::process() confirming SEGMENT_REQUEST " << packet_segment_id << endl;
 		return ACTION_CONFIRM;
 
 	    }
@@ -476,18 +478,19 @@ int DiSR::process(TPacket& p)
 	    
 	}
 	// the request packet returned to its original source
-	// must cancel the request
+	// that's a particular case of being active searching
+	// This means that the node is visited and assigned, so can confirm...
 	else if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
-	    // trivial sanity check, since it's a request originated from this node...
-	    //assert(this->segID==packet_segment_id);
+	    assert(this->visited);
+	    // the incoming direction becomes visited 
+	    link_visited[p.dir_in] = packet_segment_id;
+	    link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
+	    generate_segment_confirm(p);
+	    this->set_request_path(p.dir_in); // future confirm packet will be forwarded along this direction 
+	    cout << "[node "<<router->local_id<<"] DiSR::process() confirming SEGMENT_REQUEST " << packet_segment_id << endl;
+	    return ACTION_CONFIRM;
 
-	    cout << "[node "<< router->local_id <<  "] DiSR::process() CANDIDATE with same id, discarding request"<< packet_segment_id << " from " << p.dir_in << ", current node is the request issuer! " << endl;
-
-	    // the incoming direction becomes free
-	    free_direction(p.dir_in);
-	    generate_segment_cancel(p);
-	    return ACTION_CANCEL_REQUEST;
 	}
 	assert(false);
     }
@@ -583,70 +586,59 @@ int DiSR::process(TPacket& p)
     else if (p.type == SEGMENT_CONFIRM)
     ////////////////////////////////////////////////////////
     {
-
 	cout << "[node "<<router->local_id << "] DiSR::process() processing SEGMENT_CONFIRM with ID " << packet_segment_id << endl;
 
-	 // locally generated segment packet confirmation, 
+	//////////////////////////////////////////////////////
+	 // just generated locally
 	if ( (p.src_id==router->local_id) && (p.dir_in==DIRECTION_LOCAL) )
 	{
 	    cout << "[node "<<router->local_id << "] DiSR::process() sending locally generated SEGMENT_CONFIRM with id " << packet_segment_id << " towards " << p.dir_out << endl;
 	     // inject the packet to the appropriate link previously found by generate_segment_confirm()
 	    return p.dir_out;
 	}
-	// not-local confirm segment packet
-	else if (  p.src_id!=router->local_id ) 
+	//////////////////////////////////////////////////////
+	// the confirmation packet returned to segment initiator, all done!
+	if ( (packet_segment_id.getNode()==router->local_id) )
 	{
-	    // the confirmation packet returned to segment initiator, all done!
-	    if ( (packet_segment_id.getNode()==router->local_id) )
-	    {
-		cout << "[node "<<router->local_id<<"] DiSR::process()  SEGMENT_CONFIRM id " << packet_segment_id <<  " ended !" << endl;
+	    cout << "[node "<<router->local_id<<"] DiSR::process()  SEGMENT_CONFIRM id " << packet_segment_id <<  " ended !" << endl;
 
-		// there's no need to set as visited, since the
-		// initiator must be visited by definition
+	    // the incoming link changes from tvsited to visited with the segment id
+	    this->link_visited[p.dir_in] = packet_segment_id;
+	    this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 
-		// the incoming link changes from tvsited to visited with the segment id
-		this->link_visited[p.dir_in] = packet_segment_id;
-		this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
+	    setStatus(ASSIGNED);
+	    return ACTION_END_CONFIRM; 
+	}
+	///////////////////////////////////////////////////////
+	// any candidate node must become assigned and forward
+	if  ( (this->getStatus()==CANDIDATE) && (local_segment_id == packet_segment_id) )
+	{
 
-		setStatus(ASSIGNED);
-		return ACTION_END_CONFIRM; 
-	    }
-	    else
+	    cout << "[node "<< router->local_id <<  "] DiSR::process()  CANDIDATE to segment id: " << local_segment_id << " has been **ASSIGNED!**" << endl;
+	    setStatus(ASSIGNED);
 
-	    // any candidate node must become assigned and forward
-	    if  ( (this->getStatus()==CANDIDATE) && (local_segment_id == packet_segment_id) )
-	    {
+	    // node status changes from tvisited to visited
+	    this->tvisited = false;
+	    this->visited = true;
 
-		cout << "[node "<< router->local_id <<  "] DiSR::process()  CANDIDATE to segment id: " << local_segment_id << " has been **ASSIGNED!**" << endl;
-		setStatus(ASSIGNED);
+	    // the incoming link and forward path change from tvsited to visited with the segment id
+	    this->link_visited[p.dir_in] = packet_segment_id;
+	    this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
 
-		// node status changes from tvisited to visited
-		this->tvisited = false;
-		this->visited = true;
+	    this->link_visited[this->request_path] = packet_segment_id;
+	    this->link_tvisited[this->request_path].set(NOT_RESERVED,NOT_RESERVED);
 
-		// the incoming link and forward path change from tvsited to visited with the segment id
-		this->link_visited[p.dir_in] = packet_segment_id;
-		this->link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
-
-		this->link_visited[this->request_path] = packet_segment_id;
-		this->link_tvisited[this->request_path].set(NOT_RESERVED,NOT_RESERVED);
-
-		cout << "[node "<< router->local_id <<  "] DiSR::process()  forwarding  SEGMENT_CONFIRM " << packet_segment_id << " back to " << this->request_path << endl;
-		return this->request_path;
-		
-	    }
-	    else 
-	    {
-		cout << "[node "<<router->local_id << "] DiSR::process()  CRITICAL, receving SEGMENT_CONFIRM with inconsistent environment:" << endl;
-		cout << "[node "<<router->local_id << "] DiSR::process()  local segid = " << local_segment_id << " , packet id = " << packet_segment_id << ", ";
-		print_status();
-		assert(false);
-		return ACTION_SKIP;
-	    }
-	    
+	    cout << "[node "<< router->local_id <<  "] DiSR::process()  forwarding  SEGMENT_CONFIRM " << packet_segment_id << " back to " << this->request_path << endl;
+	    return this->request_path;
 	    
 	}
+
+	cout << "[node "<<router->local_id << "] DiSR::process()  CRITICAL, receving SEGMENT_CONFIRM with inconsistent environment:" << endl;
+	cout << "[node "<<router->local_id << "] DiSR::process()  local segid = " << local_segment_id << " , packet id = " << packet_segment_id << ", ";
+	print_status();
 	assert(false);
+	return ACTION_SKIP;
+	    
     } // SEGMENT_CONFIRM
 
     /////////////////////////////////////////////////////////
