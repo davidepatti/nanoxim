@@ -67,6 +67,7 @@ void parseCmdLine(int arg_num, char *arg_vet[])
     cout << "Running with default parameters (use '-help' option to see how to override them)" << endl;
   else
   {
+    bool set_boostrap_center = false;
     for (int i=1; i<arg_num; i++)
     {
       if (!strcmp(arg_vet[i], "-help")) 
@@ -97,7 +98,9 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	  // note that dimx and y should be set before in the command
 	  // line
 	  if (!strcmp(arg_vet[i+1],"center") )
-	    GlobalParams::bootstrap = (GlobalParams::mesh_dim_y/2)*GlobalParams::mesh_dim_x+GlobalParams::mesh_dim_x/2;
+	  {
+	      set_boostrap_center = true;
+	  }
 	  else
 	    GlobalParams::bootstrap = atoi(arg_vet[i+1]);
 	  i++;
@@ -120,6 +123,9 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	exit(1);
       }
     }
+    
+    if (set_boostrap_center)
+	    GlobalParams::bootstrap = (GlobalParams::mesh_dim_y/2)*GlobalParams::mesh_dim_x+GlobalParams::mesh_dim_x/2;
   }
 
   checkInputParameters();
