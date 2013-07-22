@@ -8,7 +8,8 @@
 #include <cassert>
 #include <cstdlib>
 #include <sys/time.h>
-
+#include <cstdlib>
+#include <cstring>
 using namespace std;
 
 //---------------------------------------------------------------------------
@@ -18,11 +19,18 @@ using namespace std;
 #define EXPLORER_KEY         "explorer"
 #define SIMULATOR_LABEL      "simulator"
 #define REPETITIONS_LABEL    "repetitions"
+#define PLOT_TYPE_LABEL      "plot_type"
 #define TMP_DIR_LABEL        "tmp"
 
 #define DEF_SIMULATOR        "./nanoxim"
 #define DEF_REPETITIONS      5
 #define DEF_TMP_DIR          "./"
+#define DEF_PLOT_TYPE        0
+
+#define PLOT_SET1	1
+#define PLOT_SET2	2
+#define PLOT_SET3	3
+
 
 #define TMP_FILE_NAME        ".nanoxim_explorer.tmp"
 #define RES_FILE_NAME        "results.txt"
@@ -56,6 +64,7 @@ struct TExplorerParams
   string simulator;
   string tmp_dir;
   int    repetitions;
+  int plot_type;
 };
 
 struct TSimulationResults
@@ -453,6 +462,7 @@ bool ExtractExplorerParams(const TParameterSpace& explorer_params,
   eparams.simulator   = DEF_SIMULATOR;
   eparams.tmp_dir     = DEF_TMP_DIR;
   eparams.repetitions = DEF_REPETITIONS;
+  eparams.plot_type = DEF_PLOT_TYPE;
 
   for (uint i=0; i<explorer_params.size(); i++)
     {
@@ -467,6 +477,8 @@ bool ExtractExplorerParams(const TParameterSpace& explorer_params,
 	iss >> eparams.repetitions;
       else if (label == TMP_DIR_LABEL)
 	iss >> eparams.tmp_dir;
+      else if (label == PLOT_TYPE_LABEL)
+	iss >> eparams.plot_type;
       else
 	{
 	  error_msg = "Invalid explorer option '" + label + "'";
@@ -750,16 +762,32 @@ bool GenMatlabCodeSaturationAnalysis(const string& var_name,
 
 //---------------------------------------------------------------------------
 */
-bool PrintMatlabVariableEnd(const int repetitions,
+bool PrintMatlabVariableEnd(const int repetitions, const int plot_type,
 			    ofstream& fout, string& error_msg)
 {
 
+    assert(plot_type);
 
-  if (!GenMatlabGraph("Node Defect Rate", "node_coverage","TEST TITLE 1",1, repetitions, 1, fout, error_msg))
-    return false;
+    switch (plot_type)
+    {
+	case PLOT_SET1:
+	  if (!GenMatlabGraph("Node Defect Rate", "node_coverage","Node Coverage",1, repetitions, 1, fout, error_msg))
+	    return false;
+	  break;
+	case PLOT_SET2:
+	  assert(false);
+	  break;
+	case PLOT_SET3:
+	  if (!GenMatlabGraph("Bootstrap Node", "node_coverage","Node Coverage",1, repetitions, 1, fout, error_msg))
+	    return false;
+	  break;
+    }
 
+
+/*
   if (!GenMatlabGraph("Link Defect Rate", "link_coverage","TEST TITLE 2",2, repetitions, 2, fout, error_msg))
     return false;
+*/
 
   return true;
 }
@@ -826,7 +854,7 @@ bool RunSimulations(const string& script_fname,
 	   << "cols = size(" << MATLAB_VAR_NAME << ", 2);" << endl
 	   << endl;
 
-      if (!PrintMatlabVariableEnd(eparams.repetitions, fout, error_msg))
+      if (!PrintMatlabVariableEnd(eparams.repetitions, eparams.plot_type,fout, error_msg))
 	return false;
     }
 
