@@ -149,8 +149,10 @@ void TRouter::txProcess()
 		else if ( (process_out[i]>=0 && process_out[i]<=4))
 		{
 		    if (reservation_table.isAvailable(process_out[i]) )
-			//cout << "[node " << local_id << "]:txProcess adding reservation i="<<i<<",o="<<process_out<<endl;
 			reservation_table.reserve(i, process_out[i]);
+		    else
+			cout << "[node " << local_id << "]:txProcess WARNING not available reservation i="<<i<<",o="<<process_out<<endl;
+			
 
 		}
 		else if (process_out[i]==ACTION_CONFIRM)
@@ -159,11 +161,6 @@ void TRouter::txProcess()
 		  // a confirmation packet has been injected in the local buffer that will be processed on next cycle
 		  process_out[DIRECTION_LOCAL] = ACTION_SKIP;
                  
-		}
-		else if (process_out[i]==NOT_VALID)
-		{
-		  cout << "[node " << local_id << "]: WARNING, process["<<i<<"] =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
-		    assert(false);
 		}
 		else if (process_out[i]==ACTION_CANCEL_REQUEST)
 		{
@@ -180,6 +177,11 @@ void TRouter::txProcess()
 		  cout << "[node " << local_id << "]: process["<<i<<"] =  ACTION_RETRY_REQUEST [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  // a new packet has been injected in the local buffer that will be processed on next cycle
 		  process_out[DIRECTION_LOCAL] = ACTION_SKIP;
+		}
+		else if (process_out[i]==NOT_VALID)
+		{
+		  cout << "[node " << local_id << "]: WARNING, process["<<i<<"] =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
+		    assert(false);
 		}
 		else 
 		{
@@ -237,6 +239,10 @@ void TRouter::txProcess()
 			      // TODO: always release ?
 			      reservation_table.release(o);
 
+			  }
+			  else
+			  {
+			      assert(false);
 			  }
 		      }
 
@@ -300,38 +306,42 @@ void TRouter::txProcess()
 		  cout << "[node " << local_id << "]: WARNING, process["<<i<<"] =  NOT_VALID [id " << packet.id << "] @time " <<sc_time_stamp().to_double()/1000<<endl;
 		  assert(false);
 	      }
-	    else  if (process_out[i]==ACTION_RETRY_REQUEST)
-	    {
-	      flush_buffer(i);
-	    }
+		else  if (process_out[i]==ACTION_RETRY_REQUEST)
+		{
+		  flush_buffer(i);
+		}
 
 	      /// single destination, no action ////////////////////////////////
 	      else if (process_out[i]>=0 && process_out[i]<=4) 
 	      {
 		  int o = reservation_table.getOutputPort(i);
-		  cout << "[node " << local_id << "] FORWARDING FROM " << i << " TO " << o << endl;
-		  // DEBUG
-		  if (o != NOT_RESERVED)
+		  if (o>=0)
 		  {
+		      cout << "[node " << local_id << "] FORWARDING FROM " << i << " TO " << o << endl;
 
 		      if ( current_level_tx[o] == ack_tx[o].read() )
 		      {
+//#ifdef VERBOSE
+			  cout << "**DEBUG** " << "@node " << local_id << " @time " <<sc_time_stamp().to_double()/1000 << " ABP current_level_tx["<<o<<"]="<<current_level_tx[o] << ", ack:" << ack_tx[o].read() << " req: " << req_tx[o]<< endl;
+//#endif
 			  packet_tx[o].write(packet);
 			  current_level_tx[o] = 1 - current_level_tx[o];
 			  req_tx[o].write(current_level_tx[o]);
 			  flush_buffer(i);
 
-#ifdef VERBOSE
-			  cout << "**DEBUG** " << "@node " << local_id << " removing from buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
-#endif
-
 			  // TODO: always release ?
 			  reservation_table.release(o);
 
+			  cout << "**DEBUG** " << "@node " << local_id << " @time " <<sc_time_stamp().to_double()/1000 << " ABP current_level_tx["<<o<<"]="<<current_level_tx[o] << ", ack:" << ack_tx[o].read() << " req: " << req_tx[o]<< endl;
 			  // Update stats
 		      }
 		      else
-			  cout << "**DEBUG** " << "@node " << local_id << " ABP not ready while removing buffer " << i << " and writing " << current_level_tx[o] << " on DIR " << o << endl;
+		      {
+			  cout << "WARNING " << "@node " << local_id << " @time " <<sc_time_stamp().to_double()/1000 << "___ ABP not ready____ " << endl;
+			  cout << "@node " << local_id << " @time " <<sc_time_stamp().to_double()/1000 << " ABP current_level_tx["<<o<<"]="<<current_level_tx[o] << ", ack:" << ack_tx[o].read() << " req: " << req_tx[o]<< endl;
+			  cout << "@node " << local_id << " @time " <<sc_time_stamp().to_double()/1000 << " releasing table entry " << o << endl;
+			  reservation_table.release(o);
+		      }
 
 		  }
 		  else
@@ -356,7 +366,7 @@ void TRouter::txProcess()
 vector<int> TRouter::routingFunction(const TPacket& p) 
 {
   TCoord position  = id2Coord(local_id);
-  TCoord src_coord = id2Coord(p.src_id);
+  //TCoord src_coord = id2Coord(p.src_id);
   TCoord dst_coord = id2Coord(p.dst_id);
 
   switch (GlobalParams::routing_algorithm)

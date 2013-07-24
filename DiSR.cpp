@@ -62,6 +62,7 @@ DiSR_status DiSR::getStatus() const
 	    break;
 	default:
 	    cout << "[node " <<router->local_id<< "] DiSR::getStatus()  WARNING not valid status " << this->status << endl;
+	    assert(false);
     }
 
     return (this->status);
@@ -100,7 +101,6 @@ void DiSR::setStatus(const DiSR_status& new_status)
 	default:
 	    cout << "[node " <<router->local_id<<"] DiSR::setStatus() CRITICAL: setting not valid status " << new_status << endl;
 	    assert(false);
-	    exit(-1);
     }
     this->status = new_status;
 }
@@ -220,7 +220,7 @@ int DiSR::process(TPacket& p)
 	    {
 		if ( this->segID.getLink()<packet_segment_id.getLink())
 		{
-		    cout << "[node "<<router->local_id << "] DiSR::process() STARTING_SEGMENT_REQUEST " << packet_segment_id << " overwrites deprecated  " << this->segID << ", enable ACTION_FLOOD" << endl;
+		    cout << "[node "<<router->local_id << "] DiSR::process() WARNING: new STARTING_SEGMENT_REQUEST " << packet_segment_id << " overwrites deprecated  " << this->segID << ", enable ACTION_FLOOD" << endl;
 		    // reset the previous LED data
 		    for (int i=0;i<DIRECTIONS;i++)
 		    {
@@ -412,7 +412,6 @@ int DiSR::process(TPacket& p)
 	    // NOTE: this is the same as ACTIVE_SEARCHING case, the only difference is that no search is currently ongoing (e.g. no free links)
 	    else if (this->getStatus()==ASSIGNED)
 	    {
-		assert(this->visited);
 		// the incoming direction becomes visited 
 		link_visited[p.dir_in] = packet_segment_id;
 		link_tvisited[p.dir_in].set(NOT_RESERVED,NOT_RESERVED);
@@ -422,47 +421,54 @@ int DiSR::process(TPacket& p)
 		return ACTION_CONFIRM;
 
 	    }
-	    // a segment request reached a node already candidate, cancel the request along that direction
-	    // TODO: or shuould retry ? if the node becomes assigned
-	    // the segment could be confirmed !
-	    //
+	    // a foreign segment request reached a node already candidate
 	    else if (this->getStatus()==CANDIDATE)
 	    {
-		// a locally generated segment request that has been already processed
-		if (this->segID==packet_segment_id && p.dir_in==DIRECTION_LOCAL)
+		// trivial case: candidate with different id, must cancel request
+		if (!(this->segID==packet_segment_id))
 		{
-		    cout << "[node "<< router->local_id <<  "] WARNING: already processed locally generated SEGMENT_REQUEST  " << packet_segment_id << endl;
-
-		    // re-try along the same direction...
-
-		    for (int i=0;i<DIRECTIONS;i++)
-		    {
-			// check for the previously reserved direction
-			// note that we should avoid the incoming request path, which is also tvisited
-			if (link_tvisited[i] == packet_segment_id && (i!=request_path) )
-			{
-			    cout << "[node "<< router->local_id <<  "] DiSR::process() re-trying SEGMENT_REQUEST  " << packet_segment_id << " along DIR " << i << endl;
-			    return i;
-			}
-		    }
-		    // you shouldn't be here...
-		    cout << "CRITICAL [node "<< router->local_id <<  "] DiSR::process() no reserved direction for already processed SEGMENT_REQUEST  " << packet_segment_id << endl;
-		    assert(false);
-		}
-		// In two cases an already candidate node should reject request:
-		// - the request id is different (of course...)
-		// - the request id is the same for which the node is candidate, but the packet does NOT come from local direction, i.e. made a loop path 
-		// returning to the node
-		else
-		{
-		    if (!(this->segID==packet_segment_id))
-			cout << "[node "<< router->local_id <<  "] DiSR::process() already CANDIDATE with id " << this->segID << ", cancelling request "<< packet_segment_id << " from " << p.dir_in << endl;
-		    else
-			cout << "[node "<< router->local_id <<  "] DiSR::process() CANDIDATE with same id, discarding request"<< packet_segment_id << " from " << p.dir_in << ", forwarding already done! " << endl;
-
+		    cout << "[node "<< router->local_id <<  "] DiSR::process() already CANDIDATE with id " << this->segID << ", cancelling request "<< packet_segment_id << " from " << p.dir_in << endl;
 		    free_direction(p.dir_in);
 		    generate_segment_cancel(p);
 		    // the incoming direction becomes free
+		    return ACTION_CANCEL_REQUEST;
+		}
+
+		// more complex case: candidate with same id. 
+		// We should cancel the request, with an important exception:
+		// - The packet itself set the CANDIDATE status, but it is still stuck in the buffer (e.g.  waits for ABP ready)
+		else 
+		{
+		    assert(p.dir_in!=DIRECTION_LOCAL);
+		    cout << "[node "<< router->local_id <<  "] WARNING: already processed SEGMENT_REQUEST  " << packet_segment_id << endl;
+//#ifdef VERBOSE
+		    cout << "[node "<< router->local_id <<  "] DiSR::process() dir_in= " << p.dir_in << " dir_out = " << p.dir_out << " request_path= " << request_path << endl;
+//#endif
+
+		    // yeah, it was waiting for ABP, since the following condition means that 
+		    // the packet itself was the one which set the CANDIDATE status
+		    if (p.dir_in == request_path)
+		    {
+			for (int i=0;i<DIRECTIONS;i++)
+			{
+			    // check for the previously reserved direction
+			    // note that we should avoid the incoming request path, which is also tvisited
+			    if (link_tvisited[i] == packet_segment_id &&  (i!=request_path))
+			    {
+				cout << "[node "<< router->local_id <<  "] DiSR::process() re-trying processed SEGMENT_REQUEST  " << packet_segment_id << " along DIR " << i << endl;
+				return i;
+			    }
+			}
+			// something strange happened...
+			cout << "[node "<< router->local_id <<  "] DiSR::process() CRITICAL: no tvisited link for already processed SEGMENT_REQUEST  "<< packet_segment_id << " from " << p.dir_in << endl;
+			assert(false);
+
+		    }
+
+		    // no, the packet is just coming from a different direction with the same id
+		    cout << "[node "<< router->local_id <<  "] DiSR::process() already CANDIDATE with same id " << this->segID << ", cancelling request "<< packet_segment_id << " from " << p.dir_in << endl;
+		    free_direction(p.dir_in);
+		    generate_segment_cancel(p);
 		    return ACTION_CANCEL_REQUEST;
 		}
 
