@@ -576,9 +576,15 @@ int DiSR::process(TPacket& p)
 	if ( (p.src_id==router->local_id) && (p.dir_in!=DIRECTION_LOCAL) )
 	{
 	    cout << "[node "<<router->local_id<<"] DiSR::process()  STARTING_SEGMENT_CONFIRM id " << packet_segment_id <<  " ended !" << endl;
-	    setStatus(ASSIGNED);
+	    // Note: status has already set to ASSIGNED when ACTION_CONFIRM was issued
+	    // Setting again as ASSIGNED would overwrite any ACTIVE_SEARCHING status, thus making
+	    // start_investigate_links() function to inject another segment request without waiting
+	    // for the previous one to be cancelled. Note that only ONE outstanding request should be 
+	    // exhists for a single node, so that the concept of "current link" being investigated makes sense.
+	    // SO, the following instruction, correct for non-bootstrap nodes, is totally wrong here...
+	    //setStatus(ASSIGNED);
 
-	    // there's no need to set as visited, since the
+	    // Also there's no need to set as visited, since the
 	    // initiator must be visited by definition
 
 	    // the incoming link changes from tvsited to visited with the segment id
