@@ -19,8 +19,6 @@ using namespace std;
 #define DIRECTION_WEST         3
 #define DIRECTION_LOCAL        4
 
-#define NO_LINK -2
-#define CYCLE_TIMEOUT -3
 
 // ACTIONS
 // flood all available out directions, ignore packet, confirm requests
@@ -34,11 +32,13 @@ using namespace std;
 #define ACTION_END_CANCEL 107
 #define ACTION_RETRY_REQUEST 108
 
-// Generic not reserved resource
-#define NOT_RESERVED          -2
 
 // To mark invalid or non exhistent values
 #define NOT_VALID             -1
+// Generic not reserved resource
+#define NOT_RESERVED          -2
+#define NO_LINK -3
+#define CYCLE_TIMEOUT -4
 
 // Routing algorithms
 #define ROUTING_XY             0
