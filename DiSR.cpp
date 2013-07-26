@@ -201,7 +201,9 @@ int DiSR::process(TPacket& p)
 	    // This becasue there's no way of figuring out if the id is a deprecated flooding...
 	    if (this->getStatus()==FREE)
 	    {
+#ifdef VERBOSE
 		cout << "[node "<<router->local_id << "] DiSR::process() enable ACTION_FLOOD" << endl;
+#endif
 
 		this->segID = packet_segment_id;
 		tvisited = true;
@@ -772,7 +774,7 @@ int DiSR::next_free_link()
 	//cout << "[DiSR::next_free_link() on  "<<router->local_id<<"] re-starting cycle... " << current_link << endl;
 	current_link=DIRECTION_NORTH;
     }
-    cout << "[node "<<router->local_id<<"] DiSR::next_free_link() start = " << cycle_start << ", curr="<<current_link << endl;
+    cout << "[node "<<router->local_id<<"] DiSR::next_free_link() cycle_start = " << cycle_start << ", current_link = "<<current_link << endl;
 
     // new Semantic:
     //
@@ -793,7 +795,9 @@ int DiSR::next_free_link()
 
     while (!stop)
     {
+#ifdef VERBOSE
 	cout << "[node "<<router->local_id<<"] DiSR::next_free_link() analyzing direction " << current_link << endl;
+#endif
 
 	if ( (link_visited[current_link].isFree()) && (link_tvisited[current_link].isFree()))
 	{

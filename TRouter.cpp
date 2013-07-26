@@ -217,7 +217,7 @@ void TRouter::txProcess()
 		  if (directions.size()>0)
 		  {
 		      // DEBUG
-		      cout << "[node " << local_id << "] FORWARDING from DIR " << i << " to MULTDIR ";
+		      cout << "[node " << local_id << "] FORWARDING from DIR " << i << " to multiple directions: ";
 		      for (unsigned int j=0;j<directions.size();j++)
 			  cout << directions[j] << ",";
 
@@ -321,9 +321,9 @@ void TRouter::txProcess()
 
 		      if ( current_level_tx[o] == ack_tx[o].read() )
 		      {
-//#ifdef VERBOSE
+#ifdef VERBOSE
 			  cout << "**DEBUG** " << "@node " << local_id << " @time " <<sc_time_stamp().to_double()/1000 << " ABP current_level_tx["<<o<<"]="<<current_level_tx[o] << ", ack:" << ack_tx[o].read() << " req: " << req_tx[o]<< endl;
-//#endif
+#endif
 			  packet_tx[o].write(packet);
 			  current_level_tx[o] = 1 - current_level_tx[o];
 			  req_tx[o].write(current_level_tx[o]);
@@ -332,7 +332,9 @@ void TRouter::txProcess()
 			  // TODO: always release ?
 			  reservation_table.release(o);
 
+#ifdef VERBOSE
 			  cout << "**DEBUG** " << "@node " << local_id << " @time " <<sc_time_stamp().to_double()/1000 << " ABP current_level_tx["<<o<<"]="<<current_level_tx[o] << ", ack:" << ack_tx[o].read() << " req: " << req_tx[o]<< endl;
+#endif
 			  // Update stats
 		      }
 		      else

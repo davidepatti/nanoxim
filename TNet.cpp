@@ -131,7 +131,9 @@ void TNet::buildMesh()
 		int node_id = t[j][i]->r->local_id;
 		int bootstrap_id =GlobalParams::bootstrap;
 
+#ifdef VERBOSE
 		cout << "Analyzing node " << node_id;
+#endif
 		double ran = ((double) rand()) / RAND_MAX;
 		//cout << " --> ran " << ran << endl;
 
@@ -153,7 +155,9 @@ void TNet::buildMesh()
 
 		if (do_defect)
 		{
+#ifdef VERBOSE
 		    cout << " found node defect " << endl;
+#endif
 		    t[j][i]->valid = false;
 
 		    // NORTH link
@@ -218,7 +222,9 @@ void TNet::buildMesh()
 	    for (int j=0; j<GlobalParams::mesh_dim_x-1; j++)
 	    {
 		int node_id = t[j][i]->r->local_id;
+#ifdef VERBOSE
 		cout << "Analyzing horizonal links, node " << node_id;
+#endif
 		double ran = ((double) rand()) / RAND_MAX;
 		cout << " --> ran " << ran << endl;
 		do_defect = ( ran < GlobalParams::defective_links);
@@ -226,7 +232,9 @@ void TNet::buildMesh()
 
 		if (do_defect && (no_bootstrap_link || !GlobalParams::bootstrap_immunity) )
 		{
+#ifdef VERBOSE
 		    cout << "found link defect " << endl;
+#endif
 		    t[j][i]->r->disr.invalidate_direction(DIRECTION_EAST);
 		    t[j+1][i]->r->disr.invalidate_direction(DIRECTION_WEST);
 
@@ -240,13 +248,17 @@ void TNet::buildMesh()
 	    for (int j=0; j<GlobalParams::mesh_dim_x; j++)
 	    {
 		int node_id = t[j][i]->r->local_id;
+#ifdef VERBOSE
 		cout << "\nAnalyzing vertical links, node " << node_id;
+#endif
 		do_defect = (((double) rand()) / RAND_MAX < GlobalParams::defective_links);
 		bool no_bootstrap_link = node_id!=GlobalParams::bootstrap && ((node_id+GlobalParams::mesh_dim_x)!=GlobalParams::bootstrap );
 
 		if (do_defect && (no_bootstrap_link || !GlobalParams::bootstrap_immunity) )
 		{
+#ifdef VERBOSE
 		    cout << "found link defect " << endl;
+#endif
 		    t[j][i]->r->disr.invalidate_direction(DIRECTION_SOUTH);
 		    t[j][i+1]->r->disr.invalidate_direction(DIRECTION_NORTH);
 
