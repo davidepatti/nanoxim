@@ -43,6 +43,7 @@ int   GlobalParams::disr               		= DEFAULT_DISR_SETUP;
 int   GlobalParams::bootstrap               	= DEFAULT_DISR_BOOTSTRAP_NODE;
 int   GlobalParams::bootstrap_timeout               = DEFAULT_BOOTSTRAP_TIMEOUT;
 int   GlobalParams::bootstrap_immunity               = DEFAULT_BOOTSTRAP_IMMUNITY;
+int   GlobalParams::graphviz               = DEFAULT_GRAPHVIZ;
 int   GlobalParams::cyclelinks               	     = DEFAULT_CYCLE_LINKS;
 double   GlobalParams::defective_links		     = 0;
 double   GlobalParams::defective_nodes		     = 0;
@@ -83,7 +84,8 @@ int sc_main(int arg_num, char* arg_vet[])
 
   // Show statistics
   GlobalStats gs(n);
-  gs.drawGraphviz();
+  if (GlobalParams::graphviz)
+      gs.drawGraphviz();
   gs.writeStats();
 
   return 0;
