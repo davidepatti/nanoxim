@@ -73,9 +73,10 @@ using namespace std;
 #define DEFAULT_BOOTSTRAP_IMMUNITY	          0
 #define DEFAULT_CYCLE_LINKS			1
 #define DEFAULT_DEFECTIVE_LINKS			0
+#define DEFAULT_GRAPHVIZ			0
 
 // TODO by Fafa - this MUST be removed!!!
-#define MAX_STATIC_DIM 35
+#define MAX_STATIC_DIM 101
 
 enum DiSR_status { BOOTSTRAP, 
 		   ACTIVE_SEARCHING, 
@@ -101,6 +102,7 @@ struct GlobalParams
   static int bootstrap_timeout;
   static int bootstrap_immunity;
   static int cyclelinks;
+  static int graphviz;
   static double defective_links;
   static double defective_nodes;
 };

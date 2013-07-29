@@ -23,6 +23,7 @@ void showHelp(char selfname[])
   cout << "\t-defective_links X - percentage of defective links (0..1) " << endl;
   cout << "\t-defective_nodes X - percentage of defective links (0..1) " << endl;
   cout << "\n-seed N - for randomness (default = time(NULL) " << endl;
+  cout << "\n-gv enable output on graphviz (default = no) " << endl;
 }
 
 //---------------------------------------------------------------------------
@@ -109,6 +110,8 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	GlobalParams::bootstrap_timeout = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-bootstrap_immunity"))
 	GlobalParams::bootstrap_immunity = 1;
+      else if (!strcmp(arg_vet[i], "-gv"))
+	GlobalParams::graphviz = 1;
       else if (!strcmp(arg_vet[i], "-cyclelinks"))
 	GlobalParams::cyclelinks = atoi(arg_vet[++i]); 
       else if (!strcmp(arg_vet[i], "-defective_links"))
