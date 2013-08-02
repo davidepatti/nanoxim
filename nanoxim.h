@@ -74,9 +74,10 @@ using namespace std;
 #define DEFAULT_CYCLE_LINKS			1
 #define DEFAULT_DEFECTIVE_LINKS			0
 #define DEFAULT_GRAPHVIZ			0
+#define DEFAULT_TTL			DEFAULT_MESH_DIM_X
 
 // TODO by Fafa - this MUST be removed!!!
-#define MAX_STATIC_DIM 101
+#define MAX_STATIC_DIM 30
 
 enum DiSR_status { BOOTSTRAP, 
 		   ACTIVE_SEARCHING, 
@@ -100,6 +101,7 @@ struct GlobalParams
   static int disr;
   static int bootstrap;
   static int bootstrap_timeout;
+  static int ttl;
   static int bootstrap_immunity;
   static int cyclelinks;
   static int graphviz;
@@ -302,12 +304,12 @@ struct TPacket
   TPacketType        type;    
   TPayload           payload;      // Optional payload
   double             timestamp;    // Unix timestamp at packet generation
-  int                hop_no;       // Current number of hops from source to destination
+  int                ttl;       // time to live
   int 		     dir_in;       // The direction it came from
   int 	        dir_out; // direction to which the packet is forwarded
   inline bool operator == (const TPacket& packet) const
   {
-    return (packet.id==id && packet.src_id==src_id && packet.type==type && packet.payload==payload && packet.hop_no==hop_no);
+    return (packet.id==id && packet.src_id==src_id && packet.type==type && packet.payload==payload && packet.ttl==ttl);
   }
 
 };
@@ -331,7 +333,7 @@ inline ostream& operator << (ostream& os, const TPacket& packet)
 	case STARTING_SEGMENT_CONFIRM: os << "Packet Type is STARTING_SEGMENT_CONFIRM" << endl; break;
 	case SEGMENT_CANCEL: os << "Packet Type is SEGMENT_CANCEL" << endl; break;
       }
-      os << "Total number of hops:" << packet.hop_no << endl;
+      os << "Time to live:" << packet.ttl << endl;
   }
 
   return os;
@@ -374,7 +376,7 @@ inline ostream& operator << (ostream& os, TSegmentId& segid)
 inline void sc_trace(sc_trace_file*& tf, const TPacket& packet, string& name)
 {
   sc_trace(tf, packet.src_id, name+".src_id");
-  sc_trace(tf, packet.hop_no, name+".hop_no");
+  sc_trace(tf, packet.ttl, name+".ttl");
 }
 
 //---------------------------------------------------------------------------
