@@ -671,6 +671,40 @@ int DiSR::process(TPacket& p)
 	// not-locally generated cancel segment packet
 	else 
 	{
+	    if (!p.ttl)
+	    {
+		cout << "[node "<< router->local_id <<  "] DiSR::process(), TTL ZERO for SEGMENT_REQUEST " << packet_segment_id  << endl;
+		this->free_direction(p.dir_in);
+
+		if (this->router->local_id == packet_segment_id.getNode() )
+		{
+		    // sanity check
+		    assert(this->visited);
+		    assert(!(this->tvisited));
+
+		    cout << "[node "<< router->local_id <<  "] DiSR::process(), ending request on initiator " << packet_segment_id  << endl;
+		    return ACTION_END_CANCEL;
+		}
+		else
+		{
+		    // even the request path should be cleared
+		    this->free_direction(this->request_path);
+
+		    // sanity check
+		    assert(this->tvisited);
+		    assert(!(this->visited));
+
+		    // node status changes from tvisited to free
+		    this->tvisited = false;
+		    this->setStatus(FREE);
+		    cout << "[node "<< router->local_id <<  "] DiSR::process(), forwarding SEGMENT_CANCEL " << packet_segment_id << " back to " << this->request_path << endl;
+		    // is it not necessary to use generate_segment_cancel(), since we already have a cancel packet
+		    return this->request_path;
+		}
+
+	    }
+	    // TTL is still valid, must retry...
+
 	    // IMPORTANT: the incoming should be set as free in every case, but
 	    // is cleaned only after the following, so that is not considered when searching 
 	    // next_free_link()
@@ -691,21 +725,26 @@ int DiSR::process(TPacket& p)
 		packet.type = SEGMENT_REQUEST;
 		packet.dir_in = DIRECTION_LOCAL;
 		packet.dir_out = new_direction;
-		packet.hop_no = p.hop_no;
+		packet.ttl = p.ttl;
 
-		cout << "[node "<< router->local_id <<  "] DiSR::process() Retrying SEGMENT_REQUEST " << this->segID << " along " << new_direction <<endl;
+		cout << "[node "<< router->local_id <<  "] DiSR::process() Retrying SEGMENT_REQUEST " << this->segID << " (ttl " << packet.ttl << " ) along " << new_direction <<endl;
 
 		router->inject_to_network(packet);
 		return ACTION_RETRY_REQUEST;
 	    }
-	    else if (new_direction==CYCLE_TIMEOUT) // no free links to retry the request
+	    else if (new_direction==CYCLE_TIMEOUT) // link investigation should be stopped
 	    {
 		cout << "[node "<< router->local_id <<  "] DiSR::process(), CYCLE_TIMEOUT for SEGMENT_REQUEST " << packet_segment_id  << endl;
 
-		// if the initial request started from here, no need
-		// to forward the segment cancel 
+		// if the initial request started from here:
+		//  - no need  to forward the segment cancel 
+		//  - visited status should remain set
 		if (this->router->local_id == packet_segment_id.getNode() )
 		{
+		    // sanity check
+		    assert(this->visited);
+		    assert(!(this->tvisited));
+
 		    cout << "[node "<< router->local_id <<  "] DiSR::process(), ending request on initiator " << packet_segment_id  << endl;
 		    return ACTION_END_CANCEL;
 		}
@@ -714,9 +753,12 @@ int DiSR::process(TPacket& p)
 		    // even the request path should be cleared
 		    this->free_direction(this->request_path);
 
+		    // sanity check
+		    assert(this->tvisited);
+		    assert(!(this->visited));
+
 		    // node status changes from tvisited to free
 		    this->tvisited = false;
-		    this->visited = false;
 		    this->setStatus(FREE);
 		    cout << "[node "<< router->local_id <<  "] DiSR::process(), forwarding SEGMENT_CANCEL " << packet_segment_id << " back to " << this->request_path << endl;
 		    // is it not necessary to use generate_segment_cancel(), since we already have a cancel packet
@@ -972,7 +1014,7 @@ void DiSR::start_investigate_links()
 	    packet.type = SEGMENT_REQUEST;
 	    packet.dir_in = DIRECTION_LOCAL;
 	    packet.dir_out = candidate_link;
-	    packet.hop_no = 0;
+	    packet.ttl = GlobalParams::ttl;
 
 	    cout << "[node "<<router->local_id<<"] DiSR::start_investigate_links() injecting SEGMENT_REQUEST " << segment_id << " towards direction " << candidate_link << endl;
 	    router->inject_to_network(packet);
@@ -1013,7 +1055,7 @@ void DiSR::bootstrap_node()
 	    packet.type = STARTING_SEGMENT_REQUEST;
 	    packet.dir_in = DIRECTION_LOCAL;
 	    packet.dir_out = candidate_link;
-	    packet.hop_no = 0;
+	    packet.ttl = GlobalParams::bootstrap_timeout;
 
 	    cout << "[node "<<router->local_id<<"] DiSR::bootstrap_node() injecting STARTING_SEGMENT_REQUEST " << segment_id << " towards direction " << candidate_link << endl;
 	    router->inject_to_network(packet);
@@ -1079,8 +1121,9 @@ void DiSR::generate_segment_cancel(TPacket& p)
     p.dir_out = p.dir_in;  // must return from where it came!
     p.dir_in = DIRECTION_LOCAL;
     p.src_id = router->local_id; // required in non-starting segment confirmation packets
+    p.ttl--;
 
-    cout << "[node "<<router->local_id<<"] DiSR::generate_segment_cancel() injecting SEGMENT_CANCEL with id " << segment_id << " towards direction " << p.dir_out << endl;
+    cout << "[node "<<router->local_id<<"] DiSR::generate_segment_cancel() injecting SEGMENT_CANCEL with id " << segment_id << " (ttl " << p.ttl << " ) towards direction " << p.dir_out << endl;
     router->inject_to_network(p);
 
 }
