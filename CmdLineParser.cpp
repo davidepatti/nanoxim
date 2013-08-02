@@ -70,6 +70,9 @@ void parseCmdLine(int arg_num, char *arg_vet[])
   else
   {
     bool set_boostrap_center = false;
+    int tmp_ttl = 0;
+
+
     for (int i=1; i<arg_num; i++)
     {
       if (!strcmp(arg_vet[i], "-help")) 
@@ -110,7 +113,7 @@ void parseCmdLine(int arg_num, char *arg_vet[])
       else if (!strcmp(arg_vet[i], "-bootstrap_timeout"))
 	GlobalParams::bootstrap_timeout = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-ttl"))
-	GlobalParams::ttl = atoi(arg_vet[++i]);
+	tmp_ttl = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-bootstrap_immunity"))
 	GlobalParams::bootstrap_immunity = 1;
       else if (!strcmp(arg_vet[i], "-gv"))
@@ -132,6 +135,11 @@ void parseCmdLine(int arg_num, char *arg_vet[])
     
     if (set_boostrap_center)
 	    GlobalParams::bootstrap = (GlobalParams::mesh_dim_y/2)*GlobalParams::mesh_dim_x+GlobalParams::mesh_dim_x/2;
+
+    if (tmp_ttl)
+	GlobalParams::ttl = tmp_ttl;
+    else
+	GlobalParams::ttl = GlobalParams::mesh_dim_x;
   }
 
   checkInputParameters();

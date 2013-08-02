@@ -74,7 +74,6 @@ using namespace std;
 #define DEFAULT_CYCLE_LINKS			1
 #define DEFAULT_DEFECTIVE_LINKS			0
 #define DEFAULT_GRAPHVIZ			0
-#define DEFAULT_TTL			DEFAULT_MESH_DIM_X
 
 // TODO by Fafa - this MUST be removed!!!
 #define MAX_STATIC_DIM 30
