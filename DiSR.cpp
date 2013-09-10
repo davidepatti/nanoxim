@@ -1,4 +1,4 @@
-/*****************************************************************************
+/*
 
   DiSR.cpp -- DiSR algorithm model implementation
 
@@ -715,19 +715,46 @@ int DiSR::process(TPacket& p)
 
 	    if ( (new_direction>=0) && (new_direction<DIRECTION_LOCAL) )
 	    {
-		// the choosen direction becomes tvisited
-		link_tvisited[new_direction] = packet_segment_id;
 
-		// prepare the new request packet usign infos from cancel packet
+		// prepare the new request packet using infos from cancel packet
 		TPacket packet;
-		packet.id = packet_segment_id;
-		packet.src_id = packet_segment_id.getNode(); //same as the original segment request packet
 		packet.type = SEGMENT_REQUEST;
 		packet.dir_in = DIRECTION_LOCAL;
 		packet.dir_out = new_direction;
-		packet.ttl = p.ttl;
 
-		cout << "[node "<< router->local_id <<  "] DiSR::process() Retrying SEGMENT_REQUEST " << this->segID << " (ttl " << packet.ttl << " ) along " << new_direction <<endl;
+		// IMPORTANT: Node has a free link to retry the request, but two
+		// different things can happen here:
+		//
+		// 1) The inital request originated from here, so we
+		// should not retry the same request segID, but a new
+		// request with a segID reflecting the new free link.
+		// Also ttl should be resetted since this is a new
+		// request
+		//
+		// 2) Otherwise, we can simply leave the same segID
+		// and TTL, since we are only trying the same request
+		// along a different path
+
+		// case 1)
+		if (this->router->local_id == packet_segment_id.getNode() )
+		{
+		    cout << "[node "<< router->local_id <<  "] DiSR::process(), ending segment request " << packet_segment_id << " on initiator" << endl;
+		    // update id and ttl field for new request
+		    packet_segment_id.set(this->router->local_id,new_direction);
+		    packet.ttl = GlobalParams::ttl;
+		    cout << "[node "<< router->local_id <<  "] DiSR::process() Trying new SEGMENT_REQUEST " << packet_segment_id << " (ttl " << packet.ttl << " ) along " << new_direction <<endl;
+		}
+		else
+		{
+		    // continue using old ttl
+		    packet.ttl = p.ttl;
+		    cout << "[node "<< router->local_id <<  "] DiSR::process() Retrying SEGMENT_REQUEST " << packet_segment_id << " (ttl " << packet.ttl << " ) along " << new_direction <<endl;
+		}
+
+		packet.id = packet_segment_id;
+		packet.src_id = packet_segment_id.getNode(); //same as the original segment request packet
+		// the choosen direction becomes tvisited
+		link_tvisited[new_direction] = packet_segment_id;
 
 		router->inject_to_network(packet);
 		return ACTION_RETRY_REQUEST;
@@ -745,7 +772,7 @@ int DiSR::process(TPacket& p)
 		    assert(this->visited);
 		    assert(!(this->tvisited));
 
-		    cout << "[node "<< router->local_id <<  "] DiSR::process(), ending request on initiator " << packet_segment_id  << endl;
+		    cout << "[node "<< router->local_id <<  "] DiSR::process(), ending segment request process " << endl;
 		    return ACTION_END_CANCEL;
 		}
 		else
