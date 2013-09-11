@@ -671,22 +671,17 @@ int DiSR::process(TPacket& p)
 	// not-locally generated cancel segment packet
 	else 
 	{
+	    // if ttl elapsed the cancel request related to not local
+	    // request should be forwarded back (until initial node)
 	    if (!p.ttl)
 	    {
-		cout << "[node "<< router->local_id <<  "] DiSR::process(), TTL ZERO for SEGMENT_REQUEST " << packet_segment_id  << endl;
-		this->free_direction(p.dir_in);
+		cout << "[node "<< router->local_id <<  "] DiSR::process(), TTL ZERO for request " << packet_segment_id  << endl;
 
-		if (this->router->local_id == packet_segment_id.getNode() )
+		// current node was not the initiator of the request
+		// so the cancel packet should be forwarded back 
+		if (this->router->local_id != packet_segment_id.getNode() )
 		{
-		    // sanity check
-		    assert(this->visited);
-		    assert(!(this->tvisited));
-
-		    cout << "[node "<< router->local_id <<  "] DiSR::process(), ending request on initiator " << packet_segment_id  << endl;
-		    return ACTION_END_CANCEL;
-		}
-		else
-		{
+		    this->free_direction(p.dir_in);
 		    // even the request path should be cleared
 		    this->free_direction(this->request_path);
 
@@ -701,9 +696,13 @@ int DiSR::process(TPacket& p)
 		    // is it not necessary to use generate_segment_cancel(), since we already have a cancel packet
 		    return this->request_path;
 		}
+		else
+		{
+		    cout << "[node "<< router->local_id <<  "] DiSR::process(), ending segment request " << packet_segment_id << " on initiator" << endl;
+		}
 
 	    }
-	    // TTL is still valid, must retry...
+	    // must retry...
 
 	    // IMPORTANT: the incoming should be set as free in every case, but
 	    // is cleaned only after the following, so that is not considered when searching 
@@ -713,6 +712,7 @@ int DiSR::process(TPacket& p)
 	    // the incoming link changes from tvsited to free 
 	    this->free_direction(p.dir_in);
 
+	    // free link found...
 	    if ( (new_direction>=0) && (new_direction<DIRECTION_LOCAL) )
 	    {
 
@@ -738,7 +738,6 @@ int DiSR::process(TPacket& p)
 		// case 1)
 		if (this->router->local_id == packet_segment_id.getNode() )
 		{
-		    cout << "[node "<< router->local_id <<  "] DiSR::process(), ending segment request " << packet_segment_id << " on initiator" << endl;
 		    // update id and ttl field for new request
 		    packet_segment_id.set(this->router->local_id,new_direction);
 		    packet.ttl = GlobalParams::ttl;
