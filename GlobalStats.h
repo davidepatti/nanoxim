@@ -102,6 +102,8 @@ class GlobalStats {
     }
     DiSR_stats;
 
+    string basefilename() const;
+
 
     const TNet *net;
 };

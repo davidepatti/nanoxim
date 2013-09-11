@@ -315,19 +315,10 @@ double GlobalStats::getPower()
 void GlobalStats::drawGraphviz()
 {
     FILE * fp;
-    char fn[100];
-    sprintf(fn,"_%dx%d_bs%d_bsi%d_bst%d_cl%d_defl%g_defn%g_seed%d.txt",
-	    GlobalParams::mesh_dim_x,
-	    GlobalParams::mesh_dim_y,
-	    GlobalParams::bootstrap,
-	    GlobalParams::bootstrap_immunity,
-	    GlobalParams::bootstrap_timeout,
-	    GlobalParams::cyclelinks,
-	    GlobalParams::defective_links,
-	    GlobalParams::defective_nodes,
-	    GlobalParams::rnd_generator_seed);
+    string fn = basefilename()+".gv";
 
-    if ( (fp = fopen(strcat(fn,".gv"),"w"))!= NULL)
+
+    if ( (fp = fopen(fn.c_str(),"w"))!= NULL)
     {
 	// draw the network layout and declare nodes
 	fprintf(fp,"\n digraph G { graph [layout=dot] ");
@@ -406,7 +397,7 @@ void GlobalStats::drawGraphviz()
 	fprintf(fp,"\n }");
 	fclose(fp);
 	char cmd[200];
-	sprintf(cmd,"dot -Tpng -o %s.png %s",fn,fn);
+	sprintf(cmd,"dot -Tpng -o %s.png %s",fn.c_str(),fn.c_str());
 	cout << cmd << endl;
         system(cmd);
     }
@@ -416,11 +407,11 @@ void GlobalStats::drawGraphviz()
     }
 }
 
-void GlobalStats::writeStats()
+string GlobalStats::basefilename() const
 {
     char fn[100];
 
-    sprintf(fn,"_%dx%d_bs%d_bsi%d_bst%d_cl%d_defl%g_defn%g_seed%d.txt",
+    sprintf(fn,"_%dx%d_b%d_bimm%d_btime%d_cl%d_defl%g_defn%g_ttl%d_seed%d",
 	    GlobalParams::mesh_dim_x,
 	    GlobalParams::mesh_dim_y,
 	    GlobalParams::bootstrap,
@@ -429,10 +420,17 @@ void GlobalStats::writeStats()
 	    GlobalParams::cyclelinks,
 	    GlobalParams::defective_links,
 	    GlobalParams::defective_nodes,
+	    GlobalParams::ttl,
 	    GlobalParams::rnd_generator_seed);
+    return string(fn);
+}
+
+void GlobalStats::writeStats()
+{
+    string fn = basefilename()+".txt";
 
     ofstream of;
-    of.open (fn);
+    of.open (fn.c_str());
     generate_disr_stats();
     of << " DiSR analytical results " << endl;
     of << "--------------------------------------------------- " << endl;
@@ -459,7 +457,7 @@ void GlobalStats::writeStats()
     }
 
     char cmd[200];
-    sprintf(cmd,"ln -sf %s results.txt",fn);
+    sprintf(cmd,"ln -sf %s results.txt",fn.c_str());
     of << cmd << endl;
     of.close();
     system(cmd);
