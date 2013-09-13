@@ -95,6 +95,7 @@ void DiSR::setStatus(const DiSR_status& new_status)
 	case CANDIDATE:
 	    break;
 	case ASSIGNED:
+	    this->assign_timestamp = sc_time_stamp().to_double()/1000;
 	    break;
 	case FREE:
 	    break;
@@ -177,6 +178,7 @@ int DiSR::process(TPacket& p)
 
 			cout << "[node "<<router->local_id<<"] DiSR::process() confirming STARTING_SEGMENT_REQUEST " << packet_segment_id << endl;
 			setStatus(ASSIGNED);
+
 
 			generate_segment_confirm(p);
 			return ACTION_CONFIRM; 
@@ -1223,4 +1225,9 @@ TSegmentId DiSR::getLinkSegmentID(int d) const
 {
     assert(d<DIRECTIONS);
     return this->link_visited[d];
+}
+
+double DiSR::get_assign_timestamp() const
+{
+    return assign_timestamp;
 }

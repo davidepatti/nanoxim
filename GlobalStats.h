@@ -73,6 +73,8 @@ class GlobalStats {
 
     void drawGraphviz();
 
+    void updateLatency(double last);
+
 
 #ifdef TESTING
     unsigned int drained_total;
@@ -85,6 +87,9 @@ class GlobalStats {
     void compute_disr_node_coverage();
     /*  percentage of nodes covered/assigned by the DiSR */
     void compute_disr_link_coverage();
+
+    // time required to complete the whole DiSR proces 
+    void compute_disr_latency();
 
     struct 
     {
@@ -99,6 +104,7 @@ class GlobalStats {
 	map<TSegmentId,vector<int> > segmentList;
 	int nsegments;
 	double average_seg_length;
+	double latency;
     }
     DiSR_stats;
 
