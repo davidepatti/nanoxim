@@ -252,6 +252,7 @@ class DiSR
   TSegmentId getLocalSegmentID() const;
   TSegmentId getLinkSegmentID(int d) const;
   bool isAssigned() const;
+  double get_assign_timestamp() const;
 
 
     private:
@@ -289,6 +290,7 @@ class DiSR
   int current_link;
   int cycle_start;
   int cyclelinks_timeout;
+  double assign_timestamp;
 
   DiSR_status status;
   

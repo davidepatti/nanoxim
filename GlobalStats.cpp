@@ -15,6 +15,7 @@ using namespace std;
 GlobalStats::GlobalStats(const TNet * _net)
 {
     net = _net;
+    DiSR_stats.latency = 0;
 
 #ifdef TESTING
     drained_total = 0;
@@ -22,15 +23,22 @@ GlobalStats::GlobalStats(const TNet * _net)
 }
 
 
+
+
 // Note: different style for DiSR stats functions:
 // - private methods that update local struct collecting all data
 
+void GlobalStats::updateLatency(double last)
+{
+    DiSR_stats.latency = last;
+}
 
 void GlobalStats::generate_disr_stats()
 {
 
     compute_disr_node_coverage();
     compute_disr_link_coverage();
+    compute_disr_latency();
 
     /*
     compute_disr_average_path_length();
@@ -299,17 +307,17 @@ double GlobalStats::getThroughput()
 
 }
 
-double GlobalStats::getPower()
+void GlobalStats::compute_disr_latency()
 {
-    double power = 0.0;
 
-    /*
     for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
 	for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
-	    power += net->t[x][y]->r->getPower();
-	    */
+	{
+	    double timestamp = net->t[x][y]->r->disr.get_assign_timestamp();
+	    if ( timestamp > DiSR_stats.latency)
+		updateLatency(timestamp);
+	}
 
-    return power;
 }
 
 void GlobalStats::drawGraphviz()
@@ -444,6 +452,7 @@ void GlobalStats::writeStats()
     of << "working coverage: " << DiSR_stats.working_link_coverage << endl;
     of << "number of segments: " << DiSR_stats.nsegments << endl;
     of << "average segment length: " << DiSR_stats.average_seg_length<< endl;
+    of << "latency: " << DiSR_stats.latency<< endl;
 
     map<TSegmentId, vector<int> >::const_iterator it;
 
