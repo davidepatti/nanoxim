@@ -1,0 +1,24 @@
+[topology]
+   50x50
+[/topology]
+
+[defective_nodes]
+0 0.5 0.05
+[/defective_nodes]
+
+[routing]
+[/routing]
+
+[default]
+   -disr -cyclelinks 3 -bootstrap center -bootstrap_immunity -bootstrap_timeout 2500
+[/default]
+
+[aggregation]
+defective_nodes
+[/aggregation]
+
+[explorer]
+   simulator ../nanoxim
+   repetitions 20
+   plot_type 1
+[/explorer]
