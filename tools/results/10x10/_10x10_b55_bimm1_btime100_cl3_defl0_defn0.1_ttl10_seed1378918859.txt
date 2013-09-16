@@ -1,0 +1,13 @@
+ DiSR analytical results 
+--------------------------------------------------- 
+total nodes: 100
+total links: 180
+defective nodes: 20
+nodes covered: 93
+links covered: 160
+node coverage: 0.93
+link coverage: 0.888889
+working coverage: 1
+number of segments: 33
+average segment length: 2.81818
+ln -sf _10x10_b55_bimm1_btime100_cl3_defl0_defn0.1_ttl10_seed1378918859.txt results.txt
