@@ -40,6 +40,7 @@ using namespace std;
 #define LINK_COVERAGE_LABEL	"link coverage:"
 #define NUMBER_OF_SEG_LABEL	"number of segments:"
 #define AVERAGE_SEG_LENGTH_LABEL	"average segment length:"
+#define LATENCY_LABEL 	"latency:"
 
 #define MATLAB_VAR_NAME      "data"
 #define MATRIX_COLUMN_WIDTH  15
@@ -75,6 +76,7 @@ struct TSimulationResults
 	double link_coverage;
 	int nsegments;
 	double avg_seg_length;
+	int latency;
 };
 
 //---------------------------------------------------------------------------
@@ -518,7 +520,7 @@ bool PrintMatlabFunction(const string& mfname,
 			 ofstream& fout, 
 			 string& error_msg)
 {
-  fout << "function [node_coverage, link_coverage, nsegments, avg_seg_length] = " << mfname << "(symbol)" << endl
+  fout << "function [node_coverage, link_coverage, nsegments, avg_seg_length, latency] = " << mfname << "(symbol)" << endl
        << endl;
 
   return true;
@@ -580,9 +582,17 @@ bool ReadResults(const string& fname,
 	  iss >> sres.avg_seg_length;
 	  continue;
 	}
+      pos = line.find(LATENCY_LABEL);
+      if (pos != string::npos) 
+	{
+	  nread++;
+	  istringstream iss(line.substr(pos + string(LATENCY_LABEL).size()));
+	  iss >> sres.latency;
+	  continue;
+	}
     }
 
-  if (nread != 4)
+  if (nread != 5)
     {
 	cout << "\n nread = " << nread;
       error_msg = "Output file " + fname + " corrupted";
@@ -663,6 +673,7 @@ bool RunSimulations(double start_time,
 	   << setw(MATRIX_COLUMN_WIDTH) << sres.link_coverage
 	   << setw(MATRIX_COLUMN_WIDTH) << sres.nsegments
 	   << setw(MATRIX_COLUMN_WIDTH) << sres.avg_seg_length
+	   << setw(MATRIX_COLUMN_WIDTH) << sres.latency
 	   << endl;
     }
 
@@ -683,7 +694,8 @@ bool PrintMatlabVariableBegin(const TParametersSpace& aggragated_params_space,
   fout << setw(MATRIX_COLUMN_WIDTH) << "node_coverage"
        << setw(MATRIX_COLUMN_WIDTH) << "link_coverage"
        << setw(MATRIX_COLUMN_WIDTH) << "nsegments"
-       << setw(MATRIX_COLUMN_WIDTH) << "avg_seg_length";
+       << setw(MATRIX_COLUMN_WIDTH) << "avg_seg_length"
+       << setw(MATRIX_COLUMN_WIDTH) << "latency";
 
   fout << endl;
 
@@ -692,48 +704,6 @@ bool PrintMatlabVariableBegin(const TParametersSpace& aggragated_params_space,
 
 //---------------------------------------------------------------------------
 
-bool GenMatlabGraph( const string& xlabel,
-		    const string& ylabel,
-		   const string& title,
-		   const int fig_no,
-		   const int repetitions, const int column,
-		   ofstream& fout, string& error_msg)
-{
-    // number of outputs
-  int out_col = 4;
-  fout << ylabel << " = [];" << endl
-       << "for i = 1:rows/" << repetitions << "," << endl
-       << "   ifirst = (i - 1) * " << repetitions << " + 1;" << endl
-       << "   ilast  = ifirst + " << repetitions << " - 1;" << endl
-       << "   tmp = " << MATLAB_VAR_NAME << "(ifirst:ilast, cols-" << out_col <<"+" << column << ");" << endl
-       << "   avg = mean(tmp);" << endl
-       << "   [h sig ci] = ttest(tmp, 0.1);" << endl
-       << "   ci = (ci(2)-ci(1))/2;" << endl
-       << "   " << ylabel << " = [" << ylabel << "; " << MATLAB_VAR_NAME << "(ifirst, 1:cols-"<<out_col<<"), avg ci];" << endl
-       << "end" << endl
-       << endl;
-
-      fout << "figure(" << fig_no << ");" << endl
-	   << "hold on;" << endl
-	   << "title('"<<title<<"')" << endl 
-	   << "plot(" << ylabel << "(:,1), " << ylabel << "(:,2), symbol);" << endl
-	   << "ylim([0 1])" << endl
-	   << "xlabel('"<<xlabel<<"')" << endl
-	   << "ylabel('"<<ylabel<<"')" << endl;
-
-  if (     (strcmp(xlabel.c_str(),"Node Defect Rate")==0) 
-        || (strcmp(xlabel.c_str(),"Link Defect Rate")==0) )
-  {
-
-	   fout << "x = [0:0.05:0.5]" << endl
-	   << "y = 1-x" << endl
-	   << "plot(x,y,'--r')" << endl
-	   << "legend('DiSR','Ideal')" << endl
-	   << endl;
-  }
-
-	      
-}
 
 //---------------------------------------------------------------------------
 /*
@@ -768,26 +738,72 @@ bool PrintMatlabVariableEnd(const int repetitions, const int plot_type,
 
     assert(plot_type);
 
+    string xlabel,ylabel,title;
+    int fig_no = 1;
+    int plot_column = 5;
+
     switch (plot_type)
     {
 	case PLOT_SET1:
-	  if (!GenMatlabGraph("Node Defect Rate", "node_coverage","Node Coverage",1, repetitions, 1, fout, error_msg))
-	    return false;
+	  xlabel = "Node Defect Rate";
+	  ylabel = "node_coverage";
+	  title = "Node Coverage";
 	  break;
 	case PLOT_SET2:
-	  assert(false);
+	  xlabel = "Node Defect Rate";
+	  ylabel = "Latency";
+	  title = "Impact of Size and Defects on Latency";
 	  break;
 	case PLOT_SET3:
-	  if (!GenMatlabGraph("Bootstrap Node", "node_coverage","Node Coverage",1, repetitions, 1, fout, error_msg))
-	    return false;
+	  xlabel = "Bootstrap Node";
+	  ylabel = "node_coverage";
+	  title = "Bootstrap Effect";
 	  break;
     }
 
+    // number of outputs
+  int out_col = 5;
+  fout << ylabel << " = [];" << endl
+       << "for i = 1:rows/" << repetitions << "," << endl
+       << "   ifirst = (i - 1) * " << repetitions << " + 1;" << endl
+       << "   ilast  = ifirst + " << repetitions << " - 1;" << endl
+       << "   tmp = " << MATLAB_VAR_NAME << "(ifirst:ilast, cols-" << out_col <<"+" << plot_column << ");" << endl
+       << "   avg = mean(tmp);" << endl
+       << "   [h sig ci] = ttest(tmp, 0.1);" << endl
+       << "   ci = (ci(2)-ci(1))/2;" << endl
+       << "   " << ylabel << " = [" << ylabel << "; " << MATLAB_VAR_NAME << "(ifirst, 1:cols-"<<out_col<<"), avg ci];" << endl
+       << "end" << endl
+       << endl;
 
-/*
-  if (!GenMatlabGraph("Link Defect Rate", "link_coverage","TEST TITLE 2",2, repetitions, 2, fout, error_msg))
-    return false;
-*/
+
+  // coverage is plotted 
+  if (plot_type==PLOT_SET1 || plot_type==PLOT_SET3)
+  {
+      fout << "figure(" << fig_no << ");" << endl
+	   << "hold on;" << endl
+	   << "title('"<<title<<"')" << endl 
+	   << "plot(" << ylabel << "(:,1), " << ylabel << "(:,2), symbol);" << endl
+	   << "ylim([0 1])" << endl
+	   << "xlabel('"<<xlabel<<"')" << endl
+	   << "ylabel('"<<ylabel<<"')" << endl;
+
+	   fout << "x = [0:0.05:0.5]" << endl
+	   << "y = 1-x" << endl
+	   << "plot(x,y,'--r')" << endl
+	   << "legend('DiSR','Ideal')" << endl
+	   << endl;
+  }
+
+  if (plot_type==PLOT_SET2)
+  {
+      fout << "figure(" << fig_no << ");" << endl
+	   << "hold on;" << endl
+	   << "title('"<<title<<"')" << endl 
+	   << "plot(" << ylabel << "(:,1), " << ylabel << "(:,2), symbol);" << endl
+	   << "xlabel('"<<xlabel<<"')" << endl
+	   << "ylabel('"<<ylabel<<"')" << endl;
+  }
+
 
   return true;
 }
