@@ -243,13 +243,15 @@ end
 
 figure(1);
 hold on;
+
 title('Node Coverage')
+x = [0:0.05:0.5]
+y = 1-x
+plot(x,y,'--r')
 plot(node_coverage(:,1), node_coverage(:,2), symbol);
 ylim([0 1])
 xlabel('Node Defect Rate')
 ylabel('node_coverage')
-x = [0:0.05:0.5]
-y = 1-x
-plot(x,y,'--r')
-legend('DiSR','Ideal')
+
+legend('10x10','Ideal')
 
