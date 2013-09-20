@@ -740,7 +740,7 @@ bool PrintMatlabVariableEnd(const int repetitions, const int plot_type,
 
     string xlabel,ylabel,title;
     int fig_no = 1;
-    int plot_column = 5;
+    int plot_column;
 
     switch (plot_type)
     {
@@ -748,16 +748,19 @@ bool PrintMatlabVariableEnd(const int repetitions, const int plot_type,
 	  xlabel = "Node Defect Rate";
 	  ylabel = "node_coverage";
 	  title = "Node Coverage";
+	  plot_column = 1;
 	  break;
 	case PLOT_SET2:
 	  xlabel = "Node Defect Rate";
 	  ylabel = "Latency";
 	  title = "Impact of Size and Defects on Latency";
+	  plot_column = 5;
 	  break;
 	case PLOT_SET3:
 	  xlabel = "Bootstrap Node";
 	  ylabel = "node_coverage";
 	  title = "Bootstrap Effect";
+	  plot_column = 1;
 	  break;
     }
 
@@ -786,7 +789,11 @@ bool PrintMatlabVariableEnd(const int repetitions, const int plot_type,
 	   << "ylim([0 1])" << endl
 	   << "xlabel('"<<xlabel<<"')" << endl
 	   << "ylabel('"<<ylabel<<"')" << endl;
+  }
 
+  // plotting ideal non defective coverage
+  if (plot_type==PLOT_SET1)
+  {
 	   fout << "x = [0:0.05:0.5]" << endl
 	   << "y = 1-x" << endl
 	   << "plot(x,y,'--r')" << endl

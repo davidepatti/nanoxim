@@ -57,13 +57,13 @@ end
 
 figure(1);
 hold on;
-title('Bootstrap Effect')
-plot(node_coverage(:,1), node_coverage(:,2), symbol);
-ylim([0 1])
-xlabel('Bootstrap Node')
-ylabel('node_coverage')
 x = [0:0.05:0.5]
 y = 1-x
 plot(x,y,'--r')
 legend('DiSR','Ideal')
+plot(node_coverage(:,1), node_coverage(:,2), symbol);
+ylim([0 1])
+xlabel('Bootstrap Node')
+ylabel('node_coverage')
+
 
